@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "show-deal-calculator",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8080", "-d", "/Users/justinpatoka/Documents/LLM Context/Sounds Good/show-deal-calculator"],
+      "port": 8080
+    }
+  ]
+}

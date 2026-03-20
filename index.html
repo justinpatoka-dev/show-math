@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Show Deal Calculator</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <h1>Show Deal Calculator</h1>
+      <p class="subtitle">Evaluate whether promotion is worth the investment.</p>
+    </div>
+    <div class="header-actions">
+      <button class="header-saved-btn" id="sidebar-open" title="View saved deals">
+        Saved Deals <span class="badge" id="saved-count-header"></span>
+      </button>
+      <button class="header-gear-btn" id="settings-open" title="Settings">&#9881;</button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ============================================ -->
+  <!-- INPUTS PANEL -->
+  <!-- ============================================ -->
+  <section class="inputs-panel" id="inputs-panel">
+
+    <div class="input-section parse-section">
+      <h2>Paste Deal Language</h2>
+      <textarea id="deal-text" rows="3" placeholder="e.g. $1,000 vs 85% after $955, 140 cap, $20 adv / $22 dos, support $150"></textarea>
+      <button type="button" id="parse-deal-btn" class="btn-parse">Parse Deal</button>
+      <p id="parse-status" class="parse-status"></p>
+    </div>
+
+    <div class="input-section">
+      <h2>Show Info</h2>
+      <div class="field-row">
+        <div class="field" style="flex:2">
+          <label for="scenario-name">Name</label>
+          <input type="text" id="scenario-name" placeholder="e.g. The Hideout - Chicago 3/22">
+        </div>
+        <div class="field" style="flex:1">
+          <label for="show-date">Date</label>
+          <input type="date" id="show-date">
+        </div>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <h2>Deal Setup</h2>
+      <div class="field">
+        <label for="deal-type">Deal Type</label>
+        <select id="deal-type">
+          <option value="flat_guarantee">Flat Guarantee</option>
+          <option value="door_deal" selected>Door Deal</option>
+          <option value="guarantee_vs_gross">Guarantee vs % of Gross</option>
+          <option value="guarantee_vs_net">Guarantee vs % of Net</option>
+          <option value="guarantee_plus_after_expenses">Guarantee + % After Expenses</option>
+        </select>
+      </div>
+      <div class="field" id="guarantee-group">
+        <label for="guarantee">Guarantee</label>
+        <div class="input-with-prefix"><span>$</span><input type="number" id="guarantee" value="0" min="0"></div>
+      </div>
+      <div class="field" id="expenses-group">
+        <label for="expenses">Expenses</label>
+        <div class="input-with-prefix"><span>$</span><input type="number" id="expenses" value="0" min="0"></div>
+        <span class="hint">Venue/production costs (check if support is included)</span>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="ticket-price">Ticket Price (advance)</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="ticket-price" value="20" min="0"></div>
+        </div>
+        <div class="field">
+          <label for="capacity">Venue Capacity</label>
+          <input type="number" id="capacity" value="200" min="0">
+        </div>
+      </div>
+      <div class="field" id="artist-pct-group">
+        <label for="artist-pct">Artist Percentage</label>
+        <div class="input-with-suffix"><input type="number" id="artist-pct" value="80" min="0" max="100" step="1"><span>%</span></div>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <h2>Post-Settlement</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="agent-pct">Agent Commission</label>
+          <div class="input-with-suffix"><input type="number" id="agent-pct" value="15" min="0" max="100" step="1"><span>%</span></div>
+        </div>
+        <div class="field">
+          <label for="support-cost">Support/Opener</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="support-cost" value="0" min="0"></div>
+          <span class="hint">Set to 0 if included in expenses</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <h2>Bonus Tiers</h2>
+      <div id="bonus-tiers-container"></div>
+      <button type="button" id="add-bonus-tier" class="btn-secondary">+ Add Bonus Tier</button>
+    </div>
+
+    <div class="input-section">
+      <h2>Venue Expectation</h2>
+      <div class="field">
+        <input type="number" id="venue-expectation" value="" min="0" placeholder="Ticket target the venue considers a good show">
+      </div>
+    </div>
+
+    <div class="input-section">
+      <h2>Merch</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="merch-spend">Avg Spend Per Attendee</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="merch-spend" value="10" min="0"></div>
+        </div>
+        <div class="field">
+          <label for="merch-margin">Profit Margin</label>
+          <div class="input-with-suffix"><input type="number" id="merch-margin" value="65" min="0" max="100"><span>%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-divider">
+      <span>Promotion Analysis</span>
+    </div>
+
+    <div class="input-section">
+      <h2>Promotion</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="marketing-fee">Marketing Fee</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="marketing-fee" value="0" min="0"></div>
+        </div>
+        <div class="field">
+          <label for="ad-spend">Ad Spend</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="ad-spend" value="0" min="0"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="cost-per-ticket">Est. Cost Per Ticket Acquired</label>
+        <div class="input-with-prefix"><span>$</span><input type="number" id="cost-per-ticket" value="7" min="0" step="0.5"></div>
+        <span class="hint">Typically $6-$8</span>
+      </div>
+    </div>
+
+    <div class="estimated-tickets-hint" id="estimated-tickets-hint">
+      Estimated tickets from ad spend: <strong id="estimated-ad-tickets">0</strong>
+    </div>
+
+    <div class="input-section">
+      <h2>Ticket Estimates</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="tickets-without">Without Promotion</label>
+          <input type="number" id="tickets-without" value="50" min="0">
+        </div>
+        <div class="field">
+          <label for="tickets-with">With Promotion</label>
+          <input type="number" id="tickets-with" value="100" min="0">
+          <span class="hint">Auto-filled from ad spend estimate. Override if needed.</span>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" id="save-scenario-btn" class="btn-primary">Save Scenario</button>
+
+  </section>
+
+  <!-- ============================================ -->
+  <!-- RESULTS PANEL -->
+  <!-- ============================================ -->
+  <section class="results-panel" id="results-panel">
+
+    <!-- ======== PHASE 1: DEAL STRUCTURE ======== -->
+
+    <!-- Key Milestones -->
+    <div class="result-card">
+      <h2>Key Milestones</h2>
+      <table class="milestones-table">
+        <thead>
+          <tr>
+            <th>Milestone</th>
+            <th>Tickets</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="ms-backend-row">
+            <td>
+              <span class="ms-name">Backend</span>
+              <span class="ms-hint">Where payout exceeds guarantee</span>
+            </td>
+            <td class="ms-tickets" id="ms-backend-tickets">N/A</td>
+          </tr>
+          <tr id="ms-venue-row">
+            <td>
+              <span class="ms-name">Venue Expectation</span>
+              <span class="ms-hint">What the venue considers a good show</span>
+            </td>
+            <td class="ms-tickets" id="ms-venue-tickets">-</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Payout at Capacity Levels -->
+    <div class="result-card">
+      <h2>What Does This Deal Pay?</h2>
+      <p id="promotability-note" class="promotability-note"></p>
+      <table class="comparison-table payout-levels-table">
+        <thead>
+          <tr>
+            <th>Capacity</th>
+            <th>Tickets</th>
+            <th>Payout</th>
+            <th>Total Income</th>
+          </tr>
+        </thead>
+        <tbody id="payout-levels-body">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ======== PHASE 2: PROMOTION ANALYSIS ======== -->
+
+    <div class="phase-divider" id="promo-results-divider">
+      <span>Promotion Analysis</span>
+    </div>
+
+    <div id="promo-results-section">
+
+      <!-- Ad Spend to Break Even -->
+      <div class="result-card breakeven-card">
+        <div class="breakeven-columns">
+          <div class="breakeven-col">
+            <h3 class="breakeven-col-title">Break Even on Promo</h3>
+            <div class="breakeven-col-primary">
+              <span class="breakeven-col-label">Ad Spend</span>
+              <span class="breakeven-col-value" id="be-equilibrium">-</span>
+            </div>
+            <div class="breakeven-col-secondary">
+              <span class="breakeven-col-label">Tickets</span>
+              <span class="breakeven-col-value-sm" id="be-tickets">-</span>
+            </div>
+            <p class="breakeven-col-hint" id="be-hint"></p>
+          </div>
+          <div class="breakeven-col" id="venue-col" style="display:none">
+            <h3 class="breakeven-col-title">Hit Venue Expectation</h3>
+            <div class="breakeven-col-primary">
+              <span class="breakeven-col-label">Ad Spend</span>
+              <span class="breakeven-col-value" id="be-venue-adspend">-</span>
+            </div>
+            <div class="breakeven-col-secondary">
+              <span class="breakeven-col-label">Tickets</span>
+              <span class="breakeven-col-value-sm" id="be-venue-tickets">-</span>
+            </div>
+            <p class="breakeven-col-hint" id="be-venue-hint"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scenario Comparison -->
+      <div class="result-card">
+        <h2>Scenario Comparison</h2>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Without Promo</th>
+              <th>With Promo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tickets Sold</td>
+              <td id="sc-tickets-without">-</td>
+              <td id="sc-tickets-with">-</td>
+            </tr>
+            <tr>
+              <td>Capacity</td>
+              <td id="sc-capacity-without">-</td>
+              <td id="sc-capacity-with">-</td>
+            </tr>
+            <tr>
+              <td>Gross Revenue</td>
+              <td id="sc-gross-without">-</td>
+              <td id="sc-gross-with">-</td>
+            </tr>
+            <tr class="row-highlight">
+              <td>Artist Net Payout</td>
+              <td id="sc-payout-without">-</td>
+              <td id="sc-payout-with">-</td>
+            </tr>
+            <tr>
+              <td>Merch Profit</td>
+              <td id="sc-merch-without">-</td>
+              <td id="sc-merch-with">-</td>
+            </tr>
+            <tr class="row-total">
+              <td>Total Artist Income</td>
+              <td id="sc-total-without">-</td>
+              <td id="sc-total-with">-</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="gain-loss-row">
+          <div class="gain-loss-item">
+            <span class="gain-loss-label">Promo Cost</span>
+            <span class="gain-loss-value" id="promo-cost-display">-</span>
+          </div>
+          <div class="gain-loss-item primary">
+            <span class="gain-loss-label">Net Gain/Loss from Promotion</span>
+            <span class="result-value" id="net-gain-loss">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommendation -->
+      <div class="result-card recommendation-card">
+        <h2>Recommendation</h2>
+        <div class="rec-row">
+          <span class="rec-label">Financial:</span>
+          <span id="rec-financial" class="rec-text">-</span>
+        </div>
+        <div class="rec-row">
+          <span class="rec-label">Strategic:</span>
+          <span id="rec-strategic" class="rec-text">-</span>
+        </div>
+        <p id="rec-warning" class="rec-warning" style="display:none"></p>
+        <p class="rec-note">Most ticket sales happen in the final week before the show. Early numbers are directional, not final.</p>
+      </div>
+
+      <!-- Collapsible: Full Payout Breakdown -->
+      <details class="result-card collapsible">
+        <summary><h2>Full Payout Breakdown</h2></summary>
+        <table class="comparison-table detail-table">
+          <thead>
+            <tr><th></th><th>Without</th><th>With</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Base Payout</td><td id="detail-base-without">-</td><td id="detail-base-with">-</td></tr>
+            <tr><td>Bonus Earned</td><td id="detail-bonus-without">-</td><td id="detail-bonus-with">-</td></tr>
+            <tr class="row-highlight"><td>Total Payout</td><td id="detail-total-payout-without">-</td><td id="detail-total-payout-with">-</td></tr>
+            <tr><td>Less: Agent</td><td id="detail-agent-without">-</td><td id="detail-agent-with">-</td></tr>
+            <tr><td>Less: Support</td><td id="detail-support-without">-</td><td id="detail-support-with">-</td></tr>
+            <tr class="row-highlight"><td>Net Payout</td><td id="detail-net-without">-</td><td id="detail-net-with">-</td></tr>
+            <tr><td>Merch Profit</td><td id="detail-merch-without">-</td><td id="detail-merch-with">-</td></tr>
+            <tr class="row-total"><td>Total Income</td><td id="detail-income-without">-</td><td id="detail-income-with">-</td></tr>
+          </tbody>
+        </table>
+        <div class="detail-additional">
+          <div><span>Additional Net Payout:</span> <span id="detail-add-payout">-</span></div>
+          <div><span>Additional Merch:</span> <span id="detail-add-merch">-</span></div>
+          <div><strong>Total Additional Income:</strong> <strong id="detail-add-income">-</strong></div>
+        </div>
+      </details>
+
+    </div><!-- /promo-results-section -->
+
+  </section>
+
+  <!-- ============================================ -->
+  <!-- SAVED SCENARIOS SIDEBAR -->
+  <!-- ============================================ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>Saved Scenarios <span id="saved-count" class="badge"></span></h2>
+      <button id="sidebar-toggle" class="sidebar-close" title="Close">&times;</button>
+    </div>
+    <div id="saved-list"></div>
+  </aside>
+
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Settings</h2>
+      <button class="modal-close" id="settings-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="api-key-input">Anthropic API Key</label>
+        <input type="password" id="api-key-input" placeholder="sk-ant-...">
+        <span class="hint">Required for the "Parse Deal" feature. Your key is stored locally in your browser and sent only to Anthropic's API.</span>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="save-api-key" class="btn-primary" style="width:auto; margin:0">Save Key</button>
+        <button type="button" id="clear-api-key" class="btn-secondary">Clear Key</button>
+      </div>
+      <p id="api-key-status" class="parse-status"></p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
