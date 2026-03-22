@@ -110,9 +110,19 @@
     </div>
 
     <div class="input-section">
-      <h2>Venue Expectation</h2>
+      <h2>Target Take-Home</h2>
       <div class="field">
-        <input type="number" id="venue-expectation" value="" min="0" placeholder="Ticket target the venue considers a good show">
+        <label for="target-take-home">What does the artist need to walk away with?</label>
+        <div class="input-with-prefix"><span>$</span><input type="number" id="target-take-home" value="" min="0" placeholder="e.g. 1500"></div>
+        <span class="hint">Total after payout, merch, and promo costs</span>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <h2>Baseline Estimate</h2>
+      <div class="field">
+        <label for="tickets-without">How many tickets do you typically sell at a venue like this?</label>
+        <input type="number" id="tickets-without" value="50" min="0">
       </div>
     </div>
 
@@ -130,6 +140,13 @@
       </div>
     </div>
 
+    <div class="input-section">
+      <h2>Venue Expectation</h2>
+      <div class="field">
+        <input type="number" id="venue-expectation" value="" min="0" placeholder="Ticket target the venue considers a good show">
+      </div>
+    </div>
+
     <div class="input-divider">
       <span>Promotion Analysis</span>
     </div>
@@ -142,14 +159,15 @@
           <div class="input-with-prefix"><span>$</span><input type="number" id="marketing-fee" value="0" min="0"></div>
         </div>
         <div class="field">
-          <label for="ad-spend">Ad Spend</label>
-          <div class="input-with-prefix"><span>$</span><input type="number" id="ad-spend" value="0" min="0"></div>
+          <label for="cost-per-ticket">Est. Cost Per Ticket</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="cost-per-ticket" value="7" min="0" step="0.5"></div>
+          <span class="hint">Typically $6-$8</span>
         </div>
       </div>
       <div class="field">
-        <label for="cost-per-ticket">Est. Cost Per Ticket Acquired</label>
-        <div class="input-with-prefix"><span>$</span><input type="number" id="cost-per-ticket" value="7" min="0" step="0.5"></div>
-        <span class="hint">Typically $6-$8</span>
+        <label for="ad-spend">Ad Spend</label>
+        <div class="input-with-prefix"><span>$</span><input type="number" id="ad-spend" value="0" min="0"></div>
+        <span class="hint" id="ad-spend-hint">Auto-filled to close gap to target. Override if needed.</span>
       </div>
     </div>
 
@@ -158,17 +176,10 @@
     </div>
 
     <div class="input-section">
-      <h2>Ticket Estimates</h2>
-      <div class="field-row">
-        <div class="field">
-          <label for="tickets-without">Without Promotion</label>
-          <input type="number" id="tickets-without" value="50" min="0">
-        </div>
-        <div class="field">
-          <label for="tickets-with">With Promotion</label>
-          <input type="number" id="tickets-with" value="100" min="0">
-          <span class="hint">Auto-filled from ad spend estimate. Override if needed.</span>
-        </div>
+      <div class="field">
+        <label for="tickets-with">Total With Promotion</label>
+        <input type="number" id="tickets-with" value="100" min="0">
+        <span class="hint">Auto-filled from baseline + ad spend. Override if needed.</span>
       </div>
     </div>
 
@@ -201,12 +212,12 @@
             </td>
             <td class="ms-tickets" id="ms-backend-tickets">N/A</td>
           </tr>
-          <tr id="ms-venue-row">
+          <tr id="ms-target-row" style="display:none">
             <td>
-              <span class="ms-name">Venue Expectation</span>
-              <span class="ms-hint">What the venue considers a good show</span>
+              <span class="ms-name">Your Target</span>
+              <span class="ms-hint" id="ms-target-hint">Tickets to hit take-home goal</span>
             </td>
-            <td class="ms-tickets" id="ms-venue-tickets">-</td>
+            <td class="ms-tickets" id="ms-target-tickets">-</td>
           </tr>
         </tbody>
       </table>
@@ -238,11 +249,29 @@
 
     <div id="promo-results-section">
 
-      <!-- Ad Spend to Break Even -->
+      <!-- Your Take-Home (with promo context) -->
+      <div class="result-card take-home-card" id="take-home-card">
+        <h2>Your Take-Home</h2>
+        <div class="take-home-columns">
+          <div class="take-home-col">
+            <span class="take-home-label">Without Promo</span>
+            <span class="take-home-value" id="th-without">-</span>
+          </div>
+          <div class="take-home-col primary">
+            <span class="take-home-label">With Promo</span>
+            <span class="take-home-value" id="th-with">-</span>
+          </div>
+        </div>
+        <div class="take-home-target" id="th-target-row" style="display:none">
+          <span id="th-target-status"></span>
+        </div>
+      </div>
+
+      <!-- Estimated Ad Spend to Break Even -->
       <div class="result-card breakeven-card">
         <div class="breakeven-columns">
           <div class="breakeven-col">
-            <h3 class="breakeven-col-title">Break Even on Promo</h3>
+            <h3 class="breakeven-col-title">Estimated to Break Even</h3>
             <div class="breakeven-col-primary">
               <span class="breakeven-col-label">Ad Spend</span>
               <span class="breakeven-col-value" id="be-equilibrium">-</span>

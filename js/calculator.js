@@ -30,6 +30,16 @@ export function calculateScenario(inputs) {
 
   const hasBonuses = inputs.bonusTiers && inputs.bonusTiers.some(t => t.amount > 0 && t.threshold > 0);
 
+  // Guaranteed take-home (what artist walks away with at 0 ticket sales)
+  const guaranteedSide = calculateSide(dealType, inputs, 0);
+  const guaranteedTakeHome = {
+    amount: guaranteedSide.totalIncome,
+    isGuaranteed: dealType.id !== 'door_deal' && inputs.guarantee > 0,
+  };
+
+  // Tickets needed to hit take-home target (without promo costs)
+  const ticketsToTarget = calculateTicketsToTarget(dealType, inputs);
+
   // Payout at capacity levels (25%, 50%, 75%, 100%)
   const capacityLevels = [0.25, 0.50, 0.75, 1.0];
   const payoutLevels = capacityLevels.map(pct => {
@@ -44,8 +54,15 @@ export function calculateScenario(inputs) {
     };
   });
 
+  // Take-home: what the artist walks away with
+  const takeHomeWithout = withoutPromo.totalIncome;
+  const takeHomeWith = withPromo.totalIncome - promoCost;
+  const targetTakeHome = inputs.targetTakeHome || 0;
+
   return {
     backend,
+    guaranteedTakeHome,
+    ticketsToTarget,
     promotabilityNote: dealType.promotabilityNote(backend, hasBonuses),
     payoutLevels,
     withoutPromo,
@@ -56,6 +73,13 @@ export function calculateScenario(inputs) {
       additionalIncome,
       promoCost,
       netGainLoss,
+    },
+    takeHome: {
+      without: takeHomeWithout,
+      with: takeHomeWith,
+      target: targetTakeHome,
+      aboveTarget: targetTakeHome > 0 ? takeHomeWith >= targetTakeHome : null,
+      gap: targetTakeHome > 0 ? takeHomeWith - targetTakeHome : null,
     },
     breakeven,
     equilibrium,
@@ -290,6 +314,28 @@ function simulateSide(dealType, inputs, tickets) {
   const merchProfit = tickets * inputs.merchSpend * inputs.merchMargin;
   const totalIncome = netPayout + merchProfit;
   return { totalIncome };
+}
+
+// ============================================
+// Tickets to hit take-home target (no promo costs)
+// ============================================
+
+function calculateTicketsToTarget(dealType, inputs) {
+  const target = inputs.targetTakeHome;
+  if (!target || target <= 0) return null;
+
+  // Check at 0 tickets (guaranteed income)
+  const side0 = calculateSide(dealType, inputs, 0);
+  if (side0.totalIncome >= target) return 0;
+
+  // Linear scan up to capacity * 1.5 (allow going over capacity for "what if")
+  const maxTickets = Math.max(Math.ceil(inputs.capacity * 1.5), 500);
+  for (let t = 1; t <= maxTickets; t++) {
+    const side = calculateSide(dealType, inputs, t);
+    if (side.totalIncome >= target) return t;
+  }
+
+  return null; // Can't reach target
 }
 
 // ============================================

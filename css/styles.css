@@ -440,6 +440,94 @@ header .subtitle { color: rgba(255,255,255,0.7); font-size: 14px; margin-top: 2p
   }
 }
 
+/* Guaranteed take-home card */
+.guaranteed-card {
+  border-left: 3px solid var(--positive);
+  text-align: center;
+}
+.guaranteed-card h2 {
+  display: block;
+  margin-bottom: 8px;
+}
+.guaranteed-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.guaranteed-value.muted {
+  color: var(--text-secondary);
+}
+.guaranteed-hint {
+  font-size: 13px;
+  margin-top: 4px;
+}
+.guaranteed-hint.positive { color: var(--positive); }
+.guaranteed-hint.negative { color: var(--negative); }
+.guaranteed-hint.neutral { color: var(--text-secondary); }
+
+/* Take-home card */
+.take-home-card {
+  border-left: 3px solid var(--accent);
+  text-align: center;
+}
+.take-home-card h2 {
+  display: block;
+  margin-bottom: 16px;
+}
+.take-home-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+.take-home-col {
+  text-align: center;
+}
+.take-home-col + .take-home-col {
+  border-left: 1px solid var(--border);
+  padding-left: 20px;
+}
+.take-home-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+.take-home-value {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+}
+.take-home-value.positive { color: var(--positive); }
+.take-home-value.negative { color: var(--negative); }
+.take-home-target {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.th-status {
+  font-size: 14px;
+  font-weight: 500;
+}
+.th-status.positive { color: var(--positive); }
+.th-status.negative { color: var(--negative); }
+
+@media (max-width: 600px) {
+  .take-home-columns {
+    grid-template-columns: 1fr;
+  }
+  .take-home-col + .take-home-col {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+}
+
 /* Phase divider */
 .phase-divider {
   text-align: center;

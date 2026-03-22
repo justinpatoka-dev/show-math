@@ -7,6 +7,7 @@ import { getApiKey, setApiKey, parseDealText } from './claude.js';
 
 let lastResults = null;
 let withPromoManuallyEdited = false;
+let adSpendManuallyEdited = false;
 
 // ============================================
 // Initialization
@@ -21,12 +22,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Don't recalculate when typing in the deal text area
     if (e.target.id === 'deal-text') return;
 
-    // Track if user manually edits "With Promotion"
+    // Track manual edits to auto-filled fields
     if (e.target.id === 'tickets-with') {
       withPromoManuallyEdited = true;
     }
+    if (e.target.id === 'ad-spend') {
+      adSpendManuallyEdited = true;
+    }
 
-    // Update estimated tickets hint and auto-fill
+    // Auto-fill ad spend from gap to target when relevant inputs change
+    if (['deal-type', 'guarantee', 'expenses', 'ticket-price', 'capacity', 'artist-pct',
+         'agent-pct', 'support-cost', 'target-take-home', 'tickets-without',
+         'cost-per-ticket', 'merch-spend', 'merch-margin', 'marketing-fee'].includes(e.target.id)) {
+      updateAdSpendFromTarget();
+    }
+
+    // Update estimated tickets hint and auto-fill "with promo"
     if (['ad-spend', 'cost-per-ticket', 'tickets-without'].includes(e.target.id)) {
       updateEstimatedTickets();
     }
@@ -105,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial state
   updateFieldVisibility(dealTypeSelect.value);
+  updateAdSpendFromTarget();
   updateEstimatedTickets();
   recalculate();
   refreshSidebar();
@@ -117,6 +129,32 @@ function closeSettings() {
 // ============================================
 // Recalculate and render
 // ============================================
+
+function updateAdSpendFromTarget() {
+  if (adSpendManuallyEdited) return;
+
+  const costPerTicket = parseFloat(document.getElementById('cost-per-ticket')?.value) || 0;
+  if (costPerTicket <= 0) return;
+
+  // Run a quick calculation to get ticketsToTarget
+  const inputs = readInputs();
+  const results = calculateScenario(inputs);
+  if (!results || !results.ticketsToTarget || results.ticketsToTarget <= 0) {
+    // No target or already met — set ad spend to 0
+    const adSpendEl = document.getElementById('ad-spend');
+    if (adSpendEl) adSpendEl.value = 0;
+    updateEstimatedTickets();
+    return;
+  }
+
+  const baseline = parseFloat(document.getElementById('tickets-without')?.value) || 0;
+  const gap = Math.max(0, results.ticketsToTarget - baseline);
+  const adSpend = Math.ceil(gap * costPerTicket);
+
+  const adSpendEl = document.getElementById('ad-spend');
+  if (adSpendEl) adSpendEl.value = adSpend;
+  updateEstimatedTickets();
+}
 
 function updateEstimatedTickets() {
   const adSpend = parseFloat(document.getElementById('ad-spend')?.value) || 0;
@@ -198,6 +236,7 @@ async function handleParseDeal() {
     };
 
     withPromoManuallyEdited = false;
+    adSpendManuallyEdited = false;
     populateInputs(formData);
     updateFieldVisibility(formData.dealTypeId);
     updateEstimatedTickets();
@@ -264,6 +303,7 @@ function handleLoad(id) {
   const scenario = getScenario(id);
   if (!scenario) return;
   withPromoManuallyEdited = false;
+  adSpendManuallyEdited = false;
   populateInputs(scenario.inputs);
   updateEstimatedTickets();
   recalculate();
