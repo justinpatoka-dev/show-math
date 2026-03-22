@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Show Math — Sounds Good Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Handjet:wght@700;900&family=Inter:wght@400;500;600&family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #c0c0c0;
+      --card-bg: #ffffff;
+      --text: #111111;
+      --text-secondary: #555555;
+      --border: #999999;
+      --border-light: #d5d5d5;
+      --accent: #111111;
+      --accent-light: #e8e8e8;
+      --positive: #1a7a3a;
+      --positive-bg: #e0f0e5;
+      --negative: #b5221a;
+      --negative-bg: #fce8e7;
+      --silver: #c0c0c0;
+      --silver-light: #d8d8d8;
+      --silver-dark: #a0a0a0;
+      --radius: 2px;
+      --shadow: 2px 2px 0px rgba(0,0,0,0.15);
+      --bevel-light: #dfdfdf;
+      --bevel-dark: #808080;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    /* ============ Header ============ */
+    header {
+      padding: 16px 24px;
+      background: var(--accent);
+      color: white;
+      border-bottom: 3px solid var(--bevel-dark);
+    }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      font-family: 'Jost', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    header .subtitle {
+      font-family: 'Jost', sans-serif;
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      font-weight: 400;
+      margin-top: 0;
+    }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .header-btn {
+      padding: 6px 14px;
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      font-family: 'Jost', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .header-btn:hover { background: rgba(255,255,255,0.1); }
+    .badge {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 10px;
+      padding: 1px 5px;
+      margin-left: 4px;
+    }
+
+    /* ============ Layout ============ */
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: calc(100vh - 70px);
+    }
+
+    .inputs-panel {
+      padding: 16px;
+      background: var(--silver-light);
+      border-right: 2px solid var(--bevel-dark);
+      overflow-y: auto;
+      max-height: calc(100vh - 70px);
+      position: sticky;
+      top: 0;
+    }
+
+    .results-panel {
+      padding: 20px;
+      overflow-y: auto;
+      max-height: calc(100vh - 70px);
+    }
+
+    /* ============ Cards (beveled retro) ============ */
+    .result-card {
+      background: var(--card-bg);
+      border: 2px solid var(--bevel-dark);
+      border-top-color: var(--bevel-light);
+      border-left-color: var(--bevel-light);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .result-card h2 {
+      font-family: 'Jost', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    /* ============ Input sections ============ */
+    .input-section {
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .input-section h2 {
+      font-family: 'Jost', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .field { margin-bottom: 8px; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+      font-family: 'Jost', sans-serif;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 2px solid var(--bevel-dark);
+      border-top-color: var(--bevel-dark);
+      border-left-color: var(--bevel-dark);
+      border-bottom-color: var(--bevel-light);
+      border-right-color: var(--bevel-light);
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: white;
+    }
+    .field input:focus, .field select:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+    .field .hint {
+      display: block;
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .input-with-prefix {
+      display: flex;
+      align-items: center;
+      border: 2px solid var(--bevel-dark);
+      border-top-color: var(--bevel-dark);
+      border-left-color: var(--bevel-dark);
+      border-bottom-color: var(--bevel-light);
+      border-right-color: var(--bevel-light);
+      background: white;
+    }
+    .input-with-prefix span {
+      padding: 6px 6px;
+      background: var(--silver);
+      color: var(--text-secondary);
+      font-size: 12px;
+      border-right: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .input-with-prefix input {
+      border: none;
+      flex: 1;
+      min-width: 0;
+      padding: 6px 8px;
+    }
+    .input-with-suffix {
+      display: flex;
+      align-items: center;
+      border: 2px solid var(--bevel-dark);
+      border-top-color: var(--bevel-dark);
+      border-left-color: var(--bevel-dark);
+      border-bottom-color: var(--bevel-light);
+      border-right-color: var(--bevel-light);
+      background: white;
+    }
+    .input-with-suffix span {
+      padding: 6px 6px;
+      background: var(--silver);
+      color: var(--text-secondary);
+      font-size: 12px;
+      border-left: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .input-with-suffix input {
+      border: none;
+      flex: 1;
+      min-width: 0;
+      padding: 6px 8px;
+    }
+
+    /* ============ Buttons ============ */
+    .btn-primary {
+      width: 100%;
+      padding: 8px 14px;
+      background: var(--accent);
+      color: white;
+      border: 2px outset var(--bevel-light);
+      font-family: 'Jost', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+    }
+    .btn-primary:hover { background: #333; }
+    .btn-primary:active { border-style: inset; }
+
+    .btn-secondary {
+      padding: 5px 10px;
+      background: var(--silver);
+      color: var(--text);
+      border: 2px outset var(--bevel-light);
+      font-size: 11px;
+      font-family: 'Jost', sans-serif;
+      cursor: pointer;
+    }
+    .btn-secondary:active { border-style: inset; }
+
+    .btn-parse {
+      width: 100%;
+      padding: 7px 14px;
+      background: var(--accent);
+      color: white;
+      border: 2px outset var(--bevel-light);
+      font-family: 'Jost', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+    }
+
+    /* ============ Milestones Table ============ */
+    .milestones-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .milestones-table th {
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      text-align: left;
+      border-bottom: 2px solid var(--accent);
+    }
+    .milestones-table th:nth-child(2) { text-align: center; }
+    .milestones-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .ms-name {
+      display: block;
+      font-family: 'Jost', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .ms-hint {
+      display: block;
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+    .ms-tickets {
+      text-align: center;
+      font-family: 'Jost', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--text);
+    }
+
+    /* ============ Payout Levels Table ============ */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .comparison-table th {
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      text-align: right;
+      border-bottom: 2px solid var(--accent);
+    }
+    .comparison-table th:first-child { text-align: left; }
+    .comparison-table td {
+      padding: 5px 10px;
+      text-align: right;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border-light);
+      font-family: 'Inter', sans-serif;
+    }
+    .comparison-table td:first-child {
+      text-align: left;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+    .comparison-table tbody tr:hover td { background: var(--silver-light); }
+    .row-highlight td { background: var(--accent-light); font-weight: 500; }
+    .row-subtotal td { font-weight: 600; border-top: 1px solid var(--border); }
+    .row-total td { font-weight: 700; border-top: 2px solid var(--accent); font-size: 14px; }
+
+    /* ============ Phase Divider ============ */
+    .phase-divider {
+      text-align: center;
+      margin: 20px 0 12px;
+      position: relative;
+    }
+    .phase-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      border-top: 2px solid var(--border);
+    }
+    .phase-divider span {
+      position: relative;
+      background: var(--bg);
+      padding: 0 12px;
+      font-family: 'Jost', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+    }
+
+    /* ============ Input Divider ============ */
+    .input-divider {
+      text-align: center;
+      margin: 14px 0 12px;
+      position: relative;
+    }
+    .input-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      border-top: 2px solid var(--border);
+    }
+    .input-divider span {
+      position: relative;
+      background: var(--silver-light);
+      padding: 0 10px;
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+    }
+
+    /* ============ Break-Even Columns ============ */
+    .breakeven-card {
+      border-left: 4px solid var(--accent);
+    }
+    .breakeven-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .breakeven-col { text-align: center; }
+    .breakeven-col + .breakeven-col {
+      border-left: 2px solid var(--border-light);
+      padding-left: 16px;
+    }
+    .breakeven-col-title {
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+    .breakeven-col-label {
+      display: block;
+      font-family: 'Jost', sans-serif;
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+    .breakeven-col-value {
+      display: block;
+      font-family: 'Jost', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1;
+    }
+    .breakeven-col-value-sm {
+      display: block;
+      font-family: 'Jost', sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1;
+      margin-top: 4px;
+    }
+    .breakeven-col-hint {
+      font-size: 11px;
+      margin-top: 8px;
+    }
+    .breakeven-col-hint.positive { color: var(--positive); }
+    .breakeven-col-hint.negative { color: var(--negative); }
+
+    /* ============ Gain/Loss Row ============ */
+    .gain-loss-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 2px solid var(--accent);
+    }
+    .gain-loss-item { text-align: center; }
+    .gain-loss-label {
+      display: block;
+      font-family: 'Jost', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+    }
+    .result-value {
+      font-family: 'Jost', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+    }
+    .result-value.positive { color: var(--positive); }
+    .result-value.negative { color: var(--negative); }
+
+    /* ============ Recommendation ============ */
+    .recommendation-card {
+      border-left: 4px solid var(--accent);
+    }
+    .rec-text {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .rec-row { margin-bottom: 6px; }
+
+    /* ============ Summary Card ============ */
+    .summary-card {
+      border-left: 4px solid var(--positive);
+    }
+    .summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .summary-header h2 { margin-bottom: 0; }
+    .btn-generate {
+      padding: 5px 12px;
+      background: var(--accent);
+      color: white;
+      border: 2px outset var(--bevel-light);
+      font-family: 'Jost', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .summary-content {
+      padding: 14px;
+      background: var(--accent-light);
+      border: 1px inset var(--bevel-dark);
+      margin-bottom: 8px;
+    }
+    .summary-content p {
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    /* ============ Estimated Tickets Hint ============ */
+    .estimated-tickets-hint {
+      padding: 8px 12px;
+      margin: 0 0 12px;
+      background: var(--accent);
+      color: white;
+      text-align: center;
+      font-family: 'Jost', sans-serif;
+      font-size: 12px;
+    }
+    .estimated-tickets-hint strong {
+      font-family: 'Jost', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      vertical-align: middle;
+    }
+
+    /* ============ Promotability Note ============ */
+    .promotability-note {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+
+    /* ============ Parse Section ============ */
+    .parse-section textarea {
+      width: 100%;
+      padding: 6px 8px;
+      border: 2px solid var(--bevel-dark);
+      border-top-color: var(--bevel-dark);
+      border-left-color: var(--bevel-dark);
+      border-bottom-color: var(--bevel-light);
+      border-right-color: var(--bevel-light);
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      resize: vertical;
+      min-height: 50px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <h1>Show Math</h1>
+      <p class="subtitle">Sounds Good Marketing</p>
+    </div>
+    <div class="header-actions">
+      <button class="header-btn">Saved Deals <span class="badge">2</span></button>
+      <button class="header-btn">&#9881;</button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- INPUTS -->
+  <section class="inputs-panel">
+
+    <div class="input-section parse-section">
+      <h2>Paste Deal Language</h2>
+      <textarea placeholder="e.g. $1,000 vs 85% after $955, 140 cap, $20 adv"></textarea>
+      <button class="btn-parse">Parse Deal</button>
+    </div>
+
+    <div class="input-section">
+      <h2>Show Info</h2>
+      <div class="field">
+        <label>Name</label>
+        <input type="text" value="The Hideout - Chicago 3/22">
+      </div>
+    </div>
+
+    <div class="input-section">
+      <h2>Deal Setup</h2>
+      <div class="field">
+        <label>Deal Type</label>
+        <select>
+          <option selected>Guarantee vs % of Gross</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Guarantee</label>
+        <div class="input-with-prefix"><span>$</span><input type="number" value="500"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Ticket Price (advance)</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" value="10"></div>
+        </div>
+        <div class="field">
+          <label>Venue Capacity</label>
+          <input type="number" value="160">
+        </div>
+      </div>
+      <div class="field">
+        <label>Artist Percentage</label>
+        <div class="input-with-suffix"><input type="number" value="75"><span>%</span></div>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <h2>Post-Settlement</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Agent Commission</label>
+          <div class="input-with-suffix"><input type="number" value="15"><span>%</span></div>
+        </div>
+        <div class="field">
+          <label>Support/Opener</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" value="0"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <h2>Venue Expectation</h2>
+      <input type="number" value="100" placeholder="Ticket target">
+    </div>
+
+    <div class="input-section">
+      <h2>Merch</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Avg Spend Per Attendee</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" value="5"></div>
+        </div>
+        <div class="field">
+          <label>Profit Margin</label>
+          <div class="input-with-suffix"><input type="number" value="60"><span>%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-divider"><span>Promotion Analysis</span></div>
+
+    <div class="input-section">
+      <h2>Promotion</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Marketing Fee</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" value="145"></div>
+        </div>
+        <div class="field">
+          <label>Ad Spend</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" value="95"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Est. Cost Per Ticket Acquired</label>
+        <div class="input-with-prefix"><span>$</span><input type="number" value="6"></div>
+        <span class="hint">Typically $6-$8</span>
+      </div>
+    </div>
+
+    <div class="estimated-tickets-hint">
+      Estimated tickets from ad spend: <strong>15</strong>
+    </div>
+
+    <div class="input-section">
+      <h2>Ticket Estimates</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Without Promotion</label>
+          <input type="number" value="50">
+        </div>
+        <div class="field">
+          <label>With Promotion</label>
+          <input type="number" value="65">
+          <span class="hint">Auto-filled from ad spend estimate.</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary">Save Scenario</button>
+
+  </section>
+
+  <!-- RESULTS -->
+  <section class="results-panel">
+
+    <!-- Key Milestones -->
+    <div class="result-card">
+      <h2>Key Milestones</h2>
+      <table class="milestones-table">
+        <thead>
+          <tr><th>Milestone</th><th>Tickets</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="ms-name">Backend</span>
+              <span class="ms-hint">Where payout exceeds guarantee</span>
+            </td>
+            <td class="ms-tickets">67</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="ms-name">Venue Expectation</span>
+              <span class="ms-hint">What the venue considers a good show</span>
+            </td>
+            <td class="ms-tickets">100</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- What Does This Deal Pay? -->
+    <div class="result-card">
+      <h2>What Does This Deal Pay?</h2>
+      <p class="promotability-note">Must cross backend (67 tix) for payout to exceed guarantee.</p>
+      <table class="comparison-table">
+        <thead>
+          <tr><th>Capacity</th><th>Tickets</th><th>Payout</th><th>Total Income</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>25%</td><td>40</td><td>$425</td><td>$545</td></tr>
+          <tr><td>50%</td><td>80</td><td>$638</td><td>$878</td></tr>
+          <tr><td>75%</td><td>120</td><td>$956</td><td>$1,316</td></tr>
+          <tr><td>100%</td><td>160</td><td>$1,275</td><td>$1,755</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Promo Divider -->
+    <div class="phase-divider"><span>Promotion Analysis</span></div>
+
+    <!-- Break-Even Columns -->
+    <div class="result-card breakeven-card">
+      <div class="breakeven-columns">
+        <div class="breakeven-col">
+          <h3 class="breakeven-col-title">Ad Spend to Break Even</h3>
+          <div>
+            <span class="breakeven-col-label">Ad Spend</span>
+            <span class="breakeven-col-value">$95</span>
+          </div>
+          <div>
+            <span class="breakeven-col-label">Total Tickets Needed</span>
+            <span class="breakeven-col-value-sm">65</span>
+          </div>
+          <p class="breakeven-col-hint positive">Promotion is paying for itself. Net gain: $9.</p>
+        </div>
+        <div class="breakeven-col">
+          <h3 class="breakeven-col-title">Ad Spend to Venue Expectation</h3>
+          <div>
+            <span class="breakeven-col-label">Ad Spend</span>
+            <span class="breakeven-col-value">$300</span>
+          </div>
+          <div>
+            <span class="breakeven-col-label">Total Tickets Needed</span>
+            <span class="breakeven-col-value-sm">100</span>
+          </div>
+          <p class="breakeven-col-hint negative">Increase ad spend to $300 to hit venue expectation.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scenario Comparison -->
+    <div class="result-card">
+      <h2>Scenario Comparison</h2>
+      <table class="comparison-table">
+        <thead>
+          <tr><th></th><th>Without Promo</th><th>With Promo</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Tickets Sold</td><td>50</td><td>65</td></tr>
+          <tr><td>Capacity</td><td>31%</td><td>41%</td></tr>
+          <tr><td>Gross Revenue</td><td>$500</td><td>$650</td></tr>
+          <tr class="row-highlight"><td>Artist Net Payout</td><td>$425</td><td>$425</td></tr>
+          <tr><td>Merch Profit</td><td>$150</td><td>$195</td></tr>
+          <tr class="row-subtotal"><td>Total Artist Income</td><td>$575</td><td>$620</td></tr>
+          <tr><td>Promo Cost</td><td>$0</td><td>($240)</td></tr>
+          <tr class="row-total"><td>Take-Home</td><td>$575</td><td>$380</td></tr>
+        </tbody>
+      </table>
+      <div class="gain-loss-row">
+        <div class="gain-loss-item">
+          <span class="gain-loss-label">Net Gain/Loss from Promotion</span>
+          <span class="result-value negative">($195)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendation -->
+    <div class="result-card recommendation-card">
+      <h2>Recommendation</h2>
+      <div class="rec-row">
+        <span class="rec-text">Promotion costs more than it earns at these numbers, but gets the artist in front of 15 more people.</span>
+      </div>
+      <div class="rec-row">
+        <span class="rec-text">Need 35 more tickets ($210 in ad spend) to meet venue expectation of 100.</span>
+      </div>
+    </div>
+
+    <!-- Artist Summary -->
+    <div class="result-card summary-card">
+      <div class="summary-header">
+        <h2>Artist Summary</h2>
+        <button class="btn-generate">Generate Summary</button>
+      </div>
+      <div class="summary-content">
+        <p>Your deal at The Hideout is 500 vs 75% of gross. Backend is at 67 tickets — once you cross that, you're earning on every ticket sold. Right now we're projecting 50 tickets without any push, which keeps you on the guarantee at 425 after agent.
+
+With 95 in ad spend, we're looking at getting you to 65 tickets. You're still just under backend, so the take-home after promo costs comes in at 380 versus 575 without promo.
+
+To make this work financially, we'd need to push past backend and get closer to the venue's target of 100 tickets. That's about 300 in ad spend. At that level, the percentage kicks in and your take-home starts climbing.
+
+This one is more of a market-building play. A strong showing here sets you up for a better deal next time — the venue sees the turnout and that's what gets you a higher guarantee on the return.</p>
+      </div>
+      <button class="btn-secondary">Copy to Clipboard</button>
+    </div>
+
+  </section>
+
+</div>
+
+</body>
+</html>

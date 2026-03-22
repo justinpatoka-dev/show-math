@@ -25,7 +25,6 @@ export function readInputs() {
 
   return {
     scenarioName: val('scenario-name', ''),
-    showDate: val('show-date', ''),
     dealTypeId: val('deal-type', 'door_deal'),
     guarantee: val('guarantee'),
     expenses: val('expenses'),
@@ -43,7 +42,6 @@ export function readInputs() {
     ticketsWith: val('tickets-with'),
     merchSpend: val('merch-spend'),
     merchMargin: val('merch-margin') / 100,
-    targetTakeHome: val('target-take-home'),
   };
 }
 
@@ -58,7 +56,6 @@ export function populateInputs(inputs) {
   };
 
   set('scenario-name', inputs.scenarioName);
-  set('show-date', inputs.showDate);
   set('deal-type', inputs.dealTypeId);
   set('guarantee', inputs.guarantee);
   set('expenses', inputs.expenses);
@@ -75,7 +72,6 @@ export function populateInputs(inputs) {
   set('tickets-with', inputs.ticketsWith);
   set('merch-spend', inputs.merchSpend);
   set('merch-margin', (inputs.merchMargin * 100));
-  set('target-take-home', inputs.targetTakeHome || '');
 
   // Rebuild bonus tiers
   const container = document.getElementById('bonus-tiers-container');
@@ -120,34 +116,6 @@ export function renderResults(results) {
   const p = results.withPromo;
   const r = results.results;
 
-  // ======== YOUR TAKE-HOME ========
-  const th = results.takeHome;
-  if (th) {
-    setCell('th-without', dollar(th.without));
-    const thWithEl = document.getElementById('th-with');
-    if (thWithEl) {
-      thWithEl.textContent = dollar(th.with);
-      thWithEl.className = 'take-home-value ' + (th.with >= th.without ? 'positive' : 'negative');
-    }
-
-    const targetRow = document.getElementById('th-target-row');
-    const targetStatus = document.getElementById('th-target-status');
-    if (targetRow && targetStatus) {
-      if (th.target > 0) {
-        targetRow.style.display = '';
-        if (th.aboveTarget) {
-          targetStatus.textContent = `${dollar(th.gap)} above your ${dollar(th.target)} target`;
-          targetStatus.className = 'th-status positive';
-        } else {
-          targetStatus.textContent = `${dollar(Math.abs(th.gap))} below your ${dollar(th.target)} target`;
-          targetStatus.className = 'th-status negative';
-        }
-      } else {
-        targetRow.style.display = 'none';
-      }
-    }
-  }
-
   // ======== PHASE 1: DEAL STRUCTURE ========
 
   // Backend milestone
@@ -159,31 +127,15 @@ export function renderResults(results) {
     document.getElementById('ms-backend-row').style.display = '';
   }
 
-  // Venue expectation milestone (removed from milestones, kept in promo section)
-
-  // Target take-home milestone
-  const targetRow = document.getElementById('ms-target-row');
-  const targetTicketsEl = document.getElementById('ms-target-tickets');
-  const targetHintEl = document.getElementById('ms-target-hint');
-  if (targetRow && targetTicketsEl) {
-    if (results.ticketsToTarget !== null && results.ticketsToTarget !== undefined) {
-      targetRow.style.display = '';
-      if (results.ticketsToTarget === 0) {
-        targetTicketsEl.textContent = '0';
-        if (targetHintEl) targetHintEl.textContent = 'Guaranteed income already meets your target';
-      } else {
-        targetTicketsEl.textContent = fmt(results.ticketsToTarget);
-        const targetAmt = results.takeHome?.target || 0;
-        if (targetHintEl) targetHintEl.textContent = `Tickets to hit ${dollar(targetAmt)} take-home`;
-      }
-    } else if (results.takeHome?.target > 0) {
-      // Target set but can't be reached
-      targetRow.style.display = '';
-      targetTicketsEl.textContent = 'N/A';
-      if (targetHintEl) targetHintEl.textContent = 'Target may not be reachable at this venue';
-    } else {
-      targetRow.style.display = 'none';
-    }
+  // Venue expectation milestone
+  const veInput = document.getElementById('venue-expectation');
+  const venueExp = veInput ? parseFloat(veInput.value) || 0 : 0;
+  if (venueExp > 0) {
+    setCell('ms-venue-tickets', fmt(venueExp));
+    document.getElementById('ms-venue-row').style.display = '';
+  } else {
+    setCell('ms-venue-tickets', '-');
+    document.getElementById('ms-venue-row').style.display = 'none';
   }
 
   // Promotability note
@@ -193,13 +145,7 @@ export function renderResults(results) {
   const tbody = document.getElementById('payout-levels-body');
   if (tbody && results.payoutLevels) {
     tbody.innerHTML = results.payoutLevels.map(level => {
-      const isBackend = results.backend !== null && level.tickets >= results.backend
-        && (level.tickets - Math.round(level.pct * 0.25 * (document.getElementById('capacity')?.value || 0))) < results.backend;
-      // Highlight the row where we first cross backend
-      const rowClass = results.backend !== null && level.tickets >= results.backend
-        && results.payoutLevels.find(l => l.tickets >= results.backend) === level
-        ? ' class="row-backend"' : '';
-      return `<tr${rowClass}>
+      return `<tr>
         <td>${Math.round(level.pct * 100)}%</td>
         <td>${fmt(level.tickets)}</td>
         <td>${dollar(level.payout)}</td>
@@ -232,15 +178,10 @@ export function renderResults(results) {
       const currentAdSpend = parseFloat(document.getElementById('ad-spend')?.value) || 0;
       if (eqHint) {
         if (currentAdSpend > 0 && netGL >= 0) {
-          eqHint.textContent = 'Promotion is paying for itself.';
+          eqHint.textContent = `Promotion is paying for itself. Net gain: ${dollar(netGL)}.`;
           eqHint.className = 'breakeven-col-hint positive';
         } else if (currentAdSpend > 0 && netGL < 0) {
-          const gap = results.equilibrium - currentAdSpend;
-          if (gap > 0) {
-            eqHint.textContent = `Need ${dollar(gap)} more to break even.`;
-          } else {
-            eqHint.textContent = 'Not yet paying for itself.';
-          }
+          eqHint.textContent = `Increase ad spend to ${dollar(results.equilibrium)} to break even.`;
           eqHint.className = 'breakeven-col-hint negative';
         } else {
           eqHint.textContent = '';
@@ -263,8 +204,16 @@ export function renderResults(results) {
   }
 
   if (beTicketsEl) {
-    beTicketsEl.textContent = results.breakeven?.totalTickets != null
-      ? fmt(results.breakeven.totalTickets) : '-';
+    // Show tickets based on equilibrium ad spend, not current ad spend
+    // This keeps the number static regardless of what the user enters for ad spend
+    const costPerTicket = parseFloat(document.getElementById('cost-per-ticket')?.value) || 0;
+    const baseline = parseFloat(document.getElementById('tickets-without')?.value) || 0;
+    if (results.equilibrium !== null && costPerTicket > 0) {
+      const equilibriumTickets = baseline + Math.floor(results.equilibrium / costPerTicket);
+      beTicketsEl.textContent = fmt(equilibriumTickets);
+    } else {
+      beTicketsEl.textContent = '-';
+    }
   }
 
   // ---- RIGHT COLUMN: Venue expectation ----
@@ -275,9 +224,6 @@ export function renderResults(results) {
   const beVenueHint = document.getElementById('be-venue-hint');
 
   if (venueExp2 > 0) {
-    if (venueCol) venueCol.style.display = '';
-
-    const currentAdSpend = parseFloat(document.getElementById('ad-spend')?.value) || 0;
     const ticketsWithout = parseFloat(document.getElementById('tickets-without')?.value) || 0;
     const ticketsWith = parseFloat(document.getElementById('tickets-with')?.value) || 0;
     const costPerTicket = parseFloat(document.getElementById('cost-per-ticket')?.value) || 0;
@@ -296,21 +242,25 @@ export function renderResults(results) {
     }
 
     if (beVenueHint) {
-      const remainingFromPromo = Math.max(0, venueExp2 - ticketsWith);
+      const currentAdSpend2 = parseFloat(document.getElementById('ad-spend')?.value) || 0;
       if (ticketGap <= 0) {
-        beVenueHint.textContent = 'On track without promotion.';
+        beVenueHint.textContent = 'On track to hit venue expectation.';
         beVenueHint.className = 'breakeven-col-hint positive';
-      } else if (remainingFromPromo <= 0) {
-        beVenueHint.textContent = 'Current promo projection meets this.';
+      } else if (currentAdSpend2 >= adSpendNeeded) {
+        beVenueHint.textContent = 'Current ad spend meets venue expectation.';
         beVenueHint.className = 'breakeven-col-hint positive';
       } else {
-        const extraAdSpend = remainingFromPromo * costPerTicket;
-        beVenueHint.textContent = `Need ${fmt(remainingFromPromo)} more tickets (${dollar(extraAdSpend)} more ad spend).`;
+        beVenueHint.textContent = `Increase ad spend to ${dollar(adSpendNeeded)} to hit venue expectation.`;
         beVenueHint.className = 'breakeven-col-hint negative';
       }
     }
   } else {
-    if (venueCol) venueCol.style.display = 'none';
+    if (beVenueAdspend) beVenueAdspend.textContent = '-';
+    if (beVenueTickets) beVenueTickets.textContent = '-';
+    if (beVenueHint) {
+      beVenueHint.textContent = 'Enter venue expectation to see this.';
+      beVenueHint.className = 'breakeven-col-hint neutral';
+    }
   }
 
   // Scenario comparison
@@ -327,6 +277,14 @@ export function renderResults(results) {
   setCell('sc-total-without', dollar(w.totalIncome));
   setCell('sc-total-with', dollar(p.totalIncome));
 
+  // Promo cost and take-home rows
+  setCell('sc-promo-without', dollar(0));
+  setCell('sc-promo-with', r.promoCost > 0 ? dollar(-r.promoCost) : dollar(0));
+  const takehomeWithout = w.totalIncome;
+  const takehomeWith = p.totalIncome - r.promoCost;
+  setCell('sc-takehome-without', dollar(takehomeWithout));
+  setCell('sc-takehome-with', dollar(takehomeWith));
+
   // Net gain/loss
   const gainEl = document.getElementById('net-gain-loss');
   if (gainEl) {
@@ -334,18 +292,9 @@ export function renderResults(results) {
     gainEl.className = 'result-value ' + (r.netGainLoss >= 0 ? 'positive' : 'negative');
   }
 
-  // Promo cost
-  setCell('promo-cost-display', dollar(r.promoCost));
-
   // Recommendation
   setText('rec-financial', results.recommendation.financial);
   setText('rec-strategic', results.recommendation.strategic);
-
-  const warningEl = document.getElementById('rec-warning');
-  if (warningEl) {
-    warningEl.textContent = results.recommendation.warning || '';
-    warningEl.style.display = results.recommendation.warning ? '' : 'none';
-  }
 
   // Full payout detail
   setCell('detail-base-without', dollar(w.basePayout));

@@ -24,21 +24,14 @@ export function calculateScenario(inputs) {
   const promoCost = inputs.marketingFee + inputs.adSpend;
   const netGainLoss = additionalIncome - promoCost;
 
+  const marketingFeeBreakeven = inputs.marketingFee > 0
+    ? calculateBreakeven(dealType, inputs, backend, inputs.marketingFee)
+    : { extraTickets: 0, totalTickets: inputs.ticketsWithout, ticketsStillNeeded: 0, adSpendRemaining: 0 };
   const breakeven = calculateBreakeven(dealType, inputs, backend, promoCost);
   const equilibrium = calculateEquilibriumAdSpend(dealType, inputs, backend);
   const recommendation = generateRecommendation(inputs, dealType, backend, withoutPromo, withPromo, netGainLoss, promoCost, breakeven);
 
   const hasBonuses = inputs.bonusTiers && inputs.bonusTiers.some(t => t.amount > 0 && t.threshold > 0);
-
-  // Guaranteed take-home (what artist walks away with at 0 ticket sales)
-  const guaranteedSide = calculateSide(dealType, inputs, 0);
-  const guaranteedTakeHome = {
-    amount: guaranteedSide.totalIncome,
-    isGuaranteed: dealType.id !== 'door_deal' && inputs.guarantee > 0,
-  };
-
-  // Tickets needed to hit take-home target (without promo costs)
-  const ticketsToTarget = calculateTicketsToTarget(dealType, inputs);
 
   // Payout at capacity levels (25%, 50%, 75%, 100%)
   const capacityLevels = [0.25, 0.50, 0.75, 1.0];
@@ -54,15 +47,8 @@ export function calculateScenario(inputs) {
     };
   });
 
-  // Take-home: what the artist walks away with
-  const takeHomeWithout = withoutPromo.totalIncome;
-  const takeHomeWith = withPromo.totalIncome - promoCost;
-  const targetTakeHome = inputs.targetTakeHome || 0;
-
   return {
     backend,
-    guaranteedTakeHome,
-    ticketsToTarget,
     promotabilityNote: dealType.promotabilityNote(backend, hasBonuses),
     payoutLevels,
     withoutPromo,
@@ -74,13 +60,7 @@ export function calculateScenario(inputs) {
       promoCost,
       netGainLoss,
     },
-    takeHome: {
-      without: takeHomeWithout,
-      with: takeHomeWith,
-      target: targetTakeHome,
-      aboveTarget: targetTakeHome > 0 ? takeHomeWith >= targetTakeHome : null,
-      gap: targetTakeHome > 0 ? takeHomeWith - targetTakeHome : null,
-    },
+    marketingFeeBreakeven,
     breakeven,
     equilibrium,
     recommendation,
@@ -317,28 +297,6 @@ function simulateSide(dealType, inputs, tickets) {
 }
 
 // ============================================
-// Tickets to hit take-home target (no promo costs)
-// ============================================
-
-function calculateTicketsToTarget(dealType, inputs) {
-  const target = inputs.targetTakeHome;
-  if (!target || target <= 0) return null;
-
-  // Check at 0 tickets (guaranteed income)
-  const side0 = calculateSide(dealType, inputs, 0);
-  if (side0.totalIncome >= target) return 0;
-
-  // Linear scan up to capacity * 1.5 (allow going over capacity for "what if")
-  const maxTickets = Math.max(Math.ceil(inputs.capacity * 1.5), 500);
-  for (let t = 1; t <= maxTickets; t++) {
-    const side = calculateSide(dealType, inputs, t);
-    if (side.totalIncome >= target) return t;
-  }
-
-  return null; // Can't reach target
-}
-
-// ============================================
 // Recommendation generator
 // ============================================
 
@@ -355,7 +313,8 @@ function generateRecommendation(inputs, dealType, backend, withoutPromo, withPro
   } else if (netGainLoss >= -(promoCost * 0.15)) {
     financial = 'Close to break-even. A small increase in tickets or decrease in spend could tip it.';
   } else {
-    financial = 'Promotion does not break even financially. Evaluate strategic value below.';
+    const extraPeople = inputs.ticketsWith - inputs.ticketsWithout;
+    financial = `Promotion costs more than it earns at these numbers, but gets the artist in front of ${extraPeople} more people.`;
   }
 
   // Strategic assessment
@@ -371,11 +330,5 @@ function generateRecommendation(inputs, dealType, backend, withoutPromo, withPro
     strategic = 'Enter venue expectation to see strategic assessment.';
   }
 
-  // Warning for below-backend merch-only zone
-  const M = inputs.merchSpend * inputs.merchMargin;
-  if (M < inputs.costPerTicket && backend !== null && backend > inputs.ticketsWithout) {
-    warning = 'Below backend: each ad-acquired ticket costs more than it earns until backend is reached.';
-  }
-
-  return { financial, strategic, warning };
+  return { financial, strategic };
 }

@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Show Deal Calculator</title>
+  <title>Show Math</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Jost:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -11,8 +13,8 @@
 <header>
   <div class="header-row">
     <div>
-      <h1>Show Deal Calculator</h1>
-      <p class="subtitle">Evaluate whether promotion is worth the investment.</p>
+      <h1>Show Math</h1>
+      <p class="subtitle">Sounds Good Marketing</p>
     </div>
     <div class="header-actions">
       <button class="header-saved-btn" id="sidebar-open" title="View saved deals">
@@ -39,15 +41,9 @@
 
     <div class="input-section">
       <h2>Show Info</h2>
-      <div class="field-row">
-        <div class="field" style="flex:2">
-          <label for="scenario-name">Name</label>
-          <input type="text" id="scenario-name" placeholder="e.g. The Hideout - Chicago 3/22">
-        </div>
-        <div class="field" style="flex:1">
-          <label for="show-date">Date</label>
-          <input type="date" id="show-date">
-        </div>
+      <div class="field">
+        <label for="scenario-name">Name</label>
+        <input type="text" id="scenario-name" placeholder="e.g. The Hideout - Chicago 3/22">
       </div>
     </div>
 
@@ -110,19 +106,9 @@
     </div>
 
     <div class="input-section">
-      <h2>Target Take-Home</h2>
+      <h2>Venue Expectation</h2>
       <div class="field">
-        <label for="target-take-home">What does the artist need to walk away with?</label>
-        <div class="input-with-prefix"><span>$</span><input type="number" id="target-take-home" value="" min="0" placeholder="e.g. 1500"></div>
-        <span class="hint">Total after payout, merch, and promo costs</span>
-      </div>
-    </div>
-
-    <div class="input-section">
-      <h2>Baseline Estimate</h2>
-      <div class="field">
-        <label for="tickets-without">How many tickets do you typically sell at a venue like this?</label>
-        <input type="number" id="tickets-without" value="50" min="0">
+        <input type="number" id="venue-expectation" value="" min="0" placeholder="Ticket target the venue considers a good show">
       </div>
     </div>
 
@@ -131,19 +117,12 @@
       <div class="field-row">
         <div class="field">
           <label for="merch-spend">Avg Spend Per Attendee</label>
-          <div class="input-with-prefix"><span>$</span><input type="number" id="merch-spend" value="10" min="0"></div>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="merch-spend" value="5" min="0"></div>
         </div>
         <div class="field">
           <label for="merch-margin">Profit Margin</label>
-          <div class="input-with-suffix"><input type="number" id="merch-margin" value="65" min="0" max="100"><span>%</span></div>
+          <div class="input-with-suffix"><input type="number" id="merch-margin" value="60" min="0" max="100"><span>%</span></div>
         </div>
-      </div>
-    </div>
-
-    <div class="input-section">
-      <h2>Venue Expectation</h2>
-      <div class="field">
-        <input type="number" id="venue-expectation" value="" min="0" placeholder="Ticket target the venue considers a good show">
       </div>
     </div>
 
@@ -156,18 +135,17 @@
       <div class="field-row">
         <div class="field">
           <label for="marketing-fee">Marketing Fee</label>
-          <div class="input-with-prefix"><span>$</span><input type="number" id="marketing-fee" value="0" min="0"></div>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="marketing-fee" value="145" min="0"></div>
         </div>
         <div class="field">
-          <label for="cost-per-ticket">Est. Cost Per Ticket</label>
-          <div class="input-with-prefix"><span>$</span><input type="number" id="cost-per-ticket" value="7" min="0" step="0.5"></div>
-          <span class="hint">Typically $6-$8</span>
+          <label for="ad-spend">Ad Spend</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="ad-spend" value="0" min="0"></div>
         </div>
       </div>
       <div class="field">
-        <label for="ad-spend">Ad Spend</label>
-        <div class="input-with-prefix"><span>$</span><input type="number" id="ad-spend" value="0" min="0"></div>
-        <span class="hint" id="ad-spend-hint">Auto-filled to close gap to target. Override if needed.</span>
+        <label for="cost-per-ticket">Est. Cost Per Ticket Acquired</label>
+        <div class="input-with-prefix"><span>$</span><input type="number" id="cost-per-ticket" value="6" min="0" step="0.5"></div>
+        <span class="hint">Typically $6-$8</span>
       </div>
     </div>
 
@@ -176,10 +154,17 @@
     </div>
 
     <div class="input-section">
-      <div class="field">
-        <label for="tickets-with">Total With Promotion</label>
-        <input type="number" id="tickets-with" value="100" min="0">
-        <span class="hint">Auto-filled from baseline + ad spend. Override if needed.</span>
+      <h2>Ticket Estimates</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="tickets-without">Without Promotion</label>
+          <input type="number" id="tickets-without" value="50" min="0">
+        </div>
+        <div class="field">
+          <label for="tickets-with">With Promotion</label>
+          <input type="number" id="tickets-with" value="100" min="0">
+          <span class="hint">Auto-filled from ad spend estimate. Override if needed.</span>
+        </div>
       </div>
     </div>
 
@@ -212,12 +197,12 @@
             </td>
             <td class="ms-tickets" id="ms-backend-tickets">N/A</td>
           </tr>
-          <tr id="ms-target-row" style="display:none">
+          <tr id="ms-venue-row">
             <td>
-              <span class="ms-name">Your Target</span>
-              <span class="ms-hint" id="ms-target-hint">Tickets to hit take-home goal</span>
+              <span class="ms-name">Venue Expectation</span>
+              <span class="ms-hint">What the venue considers a good show</span>
             </td>
-            <td class="ms-tickets" id="ms-target-tickets">-</td>
+            <td class="ms-tickets" id="ms-venue-tickets">-</td>
           </tr>
         </tbody>
       </table>
@@ -249,47 +234,29 @@
 
     <div id="promo-results-section">
 
-      <!-- Your Take-Home (with promo context) -->
-      <div class="result-card take-home-card" id="take-home-card">
-        <h2>Your Take-Home</h2>
-        <div class="take-home-columns">
-          <div class="take-home-col">
-            <span class="take-home-label">Without Promo</span>
-            <span class="take-home-value" id="th-without">-</span>
-          </div>
-          <div class="take-home-col primary">
-            <span class="take-home-label">With Promo</span>
-            <span class="take-home-value" id="th-with">-</span>
-          </div>
-        </div>
-        <div class="take-home-target" id="th-target-row" style="display:none">
-          <span id="th-target-status"></span>
-        </div>
-      </div>
-
-      <!-- Estimated Ad Spend to Break Even -->
+      <!-- Ad Spend to Break Even -->
       <div class="result-card breakeven-card">
         <div class="breakeven-columns">
           <div class="breakeven-col">
-            <h3 class="breakeven-col-title">Estimated to Break Even</h3>
+            <h3 class="breakeven-col-title">Ad Spend to Break Even</h3>
             <div class="breakeven-col-primary">
               <span class="breakeven-col-label">Ad Spend</span>
               <span class="breakeven-col-value" id="be-equilibrium">-</span>
             </div>
             <div class="breakeven-col-secondary">
-              <span class="breakeven-col-label">Tickets</span>
+              <span class="breakeven-col-label">Total Tickets Needed</span>
               <span class="breakeven-col-value-sm" id="be-tickets">-</span>
             </div>
             <p class="breakeven-col-hint" id="be-hint"></p>
           </div>
-          <div class="breakeven-col" id="venue-col" style="display:none">
-            <h3 class="breakeven-col-title">Hit Venue Expectation</h3>
+          <div class="breakeven-col" id="venue-col">
+            <h3 class="breakeven-col-title">Ad Spend to Venue Expectation</h3>
             <div class="breakeven-col-primary">
               <span class="breakeven-col-label">Ad Spend</span>
               <span class="breakeven-col-value" id="be-venue-adspend">-</span>
             </div>
             <div class="breakeven-col-secondary">
-              <span class="breakeven-col-label">Tickets</span>
+              <span class="breakeven-col-label">Total Tickets Needed</span>
               <span class="breakeven-col-value-sm" id="be-venue-tickets">-</span>
             </div>
             <p class="breakeven-col-hint" id="be-venue-hint"></p>
@@ -334,18 +301,24 @@
               <td id="sc-merch-without">-</td>
               <td id="sc-merch-with">-</td>
             </tr>
-            <tr class="row-total">
+            <tr class="row-subtotal">
               <td>Total Artist Income</td>
               <td id="sc-total-without">-</td>
               <td id="sc-total-with">-</td>
             </tr>
+            <tr>
+              <td>Promo Cost</td>
+              <td id="sc-promo-without">-</td>
+              <td id="sc-promo-with">-</td>
+            </tr>
+            <tr class="row-total">
+              <td>Take-Home</td>
+              <td id="sc-takehome-without">-</td>
+              <td id="sc-takehome-with">-</td>
+            </tr>
           </tbody>
         </table>
         <div class="gain-loss-row">
-          <div class="gain-loss-item">
-            <span class="gain-loss-label">Promo Cost</span>
-            <span class="gain-loss-value" id="promo-cost-display">-</span>
-          </div>
           <div class="gain-loss-item primary">
             <span class="gain-loss-label">Net Gain/Loss from Promotion</span>
             <span class="result-value" id="net-gain-loss">-</span>
@@ -357,15 +330,24 @@
       <div class="result-card recommendation-card">
         <h2>Recommendation</h2>
         <div class="rec-row">
-          <span class="rec-label">Financial:</span>
           <span id="rec-financial" class="rec-text">-</span>
         </div>
         <div class="rec-row">
-          <span class="rec-label">Strategic:</span>
           <span id="rec-strategic" class="rec-text">-</span>
         </div>
-        <p id="rec-warning" class="rec-warning" style="display:none"></p>
-        <p class="rec-note">Most ticket sales happen in the final week before the show. Early numbers are directional, not final.</p>
+      </div>
+
+      <!-- Artist Summary -->
+      <div class="result-card summary-card">
+        <div class="summary-header">
+          <h2>Artist Summary</h2>
+          <button type="button" id="generate-summary-btn" class="btn-generate">Generate Summary</button>
+        </div>
+        <div id="summary-content" class="summary-content" style="display:none">
+          <p id="summary-text"></p>
+          <button type="button" id="copy-summary-btn" class="btn-secondary copy-btn">Copy to Clipboard</button>
+        </div>
+        <p id="summary-status" class="parse-status"></p>
       </div>
 
       <!-- Collapsible: Full Payout Breakdown -->

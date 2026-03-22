@@ -53,6 +53,94 @@ export function setApiKey(key) {
   }
 }
 
+const SUMMARY_PROMPT = `You are a music marketing strategist writing a short summary for an artist about their show deal and whether promotion makes sense. Your tone is direct, specific, and conversational — no fluff, no jargon. You're talking to the artist like a trusted advisor.
+
+You will receive a JSON object with the full calculator results for a show. Write a summary that covers:
+
+1. What the deal pays — the guarantee (if any), when backend kicks in, what happens above backend
+2. The key ticket numbers — backend threshold, where the artist is projected, venue expectation if set
+3. What promotion does to their take-home — the before/after comparison
+4. Recommended approach — how much to spend on ads and why
+
+Rules:
+- Never say "don't promote" or "promotion is not worth it"
+- If promo doesn't break even financially, frame it as: market-building, getting in front of new fans, showing the venue a strong turnout for a better deal next time
+- Use specific dollar amounts and ticket numbers, not vague language
+- Keep it to 3-5 short paragraphs
+- Do not use markdown formatting, bullet points, or headers — write it as plain conversational text that can be pasted into an email
+- Do not use dollar signs — spell out "dollars" or just use the number with "bucks" or leave the currency implicit (e.g. "take-home goes from 1,000 to 1,400")
+- Address the artist as "you" and the promoter (the user) as "we"
+- Only return the summary text, nothing else`;
+
+export async function generateArtistSummary(showName, results, inputs) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('No API key set. Click the gear icon in the header to add your Anthropic API key.');
+  }
+
+  const context = {
+    showName: showName || 'This show',
+    dealType: inputs.dealTypeId,
+    guarantee: inputs.guarantee,
+    expenses: inputs.expenses,
+    ticketPrice: inputs.ticketPrice,
+    capacity: inputs.capacity,
+    artistPct: inputs.artistPct * 100,
+    agentPct: inputs.agentPct * 100,
+    supportCost: inputs.supportCost,
+    venueExpectation: inputs.venueExpectation,
+    backend: results.backend,
+    ticketsWithout: inputs.ticketsWithout,
+    ticketsWith: inputs.ticketsWith,
+    marketingFee: inputs.marketingFee,
+    adSpend: inputs.adSpend,
+    costPerTicket: inputs.costPerTicket,
+    takeHomeWithout: results.withoutPromo.totalIncome,
+    takeHomeWith: results.withPromo.totalIncome - results.results.promoCost,
+    promoCost: results.results.promoCost,
+    netGainLoss: results.results.netGainLoss,
+    equilibrium: results.equilibrium,
+    recommendation: results.recommendation,
+  };
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: SUMMARY_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: `Generate an artist-facing summary for this show:\n\n${JSON.stringify(context, null, 2)}`,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    if (response.status === 401) {
+      throw new Error('Invalid API key. Check your key in settings.');
+    }
+    throw new Error(`API error (${response.status}): ${err}`);
+  }
+
+  const data = await response.json();
+  const content = data.content?.[0]?.text;
+  if (!content) {
+    throw new Error('Empty response from Claude.');
+  }
+
+  return content.trim();
+}
+
 export async function parseDealText(text) {
   const apiKey = getApiKey();
   if (!apiKey) {

@@ -41,7 +41,5 @@ export function getScenario(id) {
 }
 
 function generateName(inputs) {
-  const venue = inputs.venueName || 'Untitled';
-  const date = inputs.showDate || '';
-  return date ? `${venue} - ${date}` : venue;
+  return inputs.scenarioName || 'Untitled';
 }
