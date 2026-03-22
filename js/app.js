@@ -3,7 +3,7 @@
 import { calculateScenario } from './calculator.js';
 import { readInputs, populateInputs, renderResults, updateFieldVisibility, addBonusTierRow, renderSavedScenarios } from './ui.js';
 import { saveScenario, loadScenarios, deleteScenario, getScenario } from './storage.js';
-import { getApiKey, setApiKey, parseDealText, generateArtistSummary } from './claude.js';
+import { parseDealText, generateArtistSummary } from './claude.js';
 
 let lastResults = null;
 let withPromoManuallyEdited = false;
@@ -86,51 +86,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Settings modal
-  document.getElementById('settings-open')?.addEventListener('click', () => {
-    const modal = document.getElementById('settings-modal');
-    modal.style.display = 'flex';
-    // Pre-fill if key exists
-    const existing = getApiKey();
-    document.getElementById('api-key-input').value = existing ? existing.substring(0, 10) + '...' : '';
-    document.getElementById('api-key-status').textContent = existing ? 'Key is saved.' : '';
-    document.getElementById('api-key-status').className = 'parse-status' + (existing ? ' info' : '');
-  });
-  document.getElementById('settings-close')?.addEventListener('click', closeSettings);
-  document.getElementById('settings-modal')?.addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeSettings();
-  });
-  document.getElementById('save-api-key')?.addEventListener('click', () => {
-    const input = document.getElementById('api-key-input');
-    const val = input.value.trim();
-    if (!val || val.endsWith('...')) {
-      // Don't overwrite with the masked display value
-      document.getElementById('api-key-status').textContent = 'Enter your full API key.';
-      document.getElementById('api-key-status').className = 'parse-status error';
-      return;
-    }
-    setApiKey(val);
-    document.getElementById('api-key-status').textContent = 'Key saved.';
-    document.getElementById('api-key-status').className = 'parse-status success';
-    input.value = val.substring(0, 10) + '...';
-  });
-  document.getElementById('clear-api-key')?.addEventListener('click', () => {
-    setApiKey('');
-    document.getElementById('api-key-input').value = '';
-    document.getElementById('api-key-status').textContent = 'Key cleared.';
-    document.getElementById('api-key-status').className = 'parse-status info';
-  });
-
   // Initial state
   updateFieldVisibility(dealTypeSelect.value);
   updateEstimatedTickets();
   recalculate();
   refreshSidebar();
 });
-
-function closeSettings() {
-  document.getElementById('settings-modal').style.display = 'none';
-}
 
 // ============================================
 // Recalculate and render
@@ -173,12 +134,6 @@ async function handleParseDeal() {
 
   if (!text) {
     status.textContent = 'Enter deal language to parse.';
-    status.className = 'parse-status error';
-    return;
-  }
-
-  if (!getApiKey()) {
-    status.textContent = 'No API key set. Click the gear icon to add your Anthropic API key.';
     status.className = 'parse-status error';
     return;
   }
@@ -247,12 +202,6 @@ async function handleGenerateSummary() {
 
   if (!lastResults) {
     status.textContent = 'Run the calculator first.';
-    status.className = 'parse-status error';
-    return;
-  }
-
-  if (!getApiKey()) {
-    status.textContent = 'No API key set. Click the gear icon to add your Anthropic API key.';
     status.className = 'parse-status error';
     return;
   }

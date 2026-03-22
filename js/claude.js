@@ -1,83 +1,21 @@
-// Claude API integration — parses deal language into calculator inputs
+// Claude API integration via serverless proxy — no API key needed client-side
 
-const STORAGE_KEY_API = 'showDealCalc_apiKey';
+export async function parseDealText(text) {
+  const response = await fetch('/api/parse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
 
-const SYSTEM_PROMPT = `You are a music industry deal parser. You receive raw deal language from booking agents and extract structured data for a show deal calculator.
-
-The calculator supports 5 deal types:
-1. "flat_guarantee" — Artist gets a fixed dollar amount regardless of ticket sales.
-2. "door_deal" — Artist gets a percentage of all ticket revenue from dollar one. No guarantee, no expenses.
-3. "guarantee_vs_gross" — Artist gets the GREATER of a guarantee OR a percentage of gross ticket revenue. Expenses may be a threshold that gross must exceed before the percentage kicks in, but the percentage applies to ALL gross (not net).
-4. "guarantee_vs_net" — Artist gets the GREATER of a guarantee OR a percentage of net revenue (gross minus expenses).
-5. "guarantee_plus_after_expenses" — Artist gets the guarantee PLUS a percentage of revenue above the expense threshold.
-
-Key distinctions:
-- "vs" means the artist gets whichever is higher (guarantee or percentage)
-- "plus after" or "+" means the artist gets BOTH the guarantee AND the percentage above expenses
-- "from dollar 1" or "of door" means door_deal (no guarantee, no expenses)
-- "flat" with no percentage mentioned means flat_guarantee
-- When expenses "include" the guarantee, support, hospitality, etc., the expense number is the total nut
-- When support is "included in expenses," set supportCost to 0 to avoid double-counting
-- "After" or "over" followed by a dollar amount typically means expenses/threshold
-
-Return a JSON object with these fields (use null for anything you can't determine):
-{
-  "dealTypeId": "one of the 5 IDs above",
-  "scenarioName": "venue name and city if available",
-  "guarantee": number or 0,
-  "expenses": number or 0,
-  "ticketPrice": number (use advance price if both advance and day-of are given),
-  "capacity": number or null,
-  "artistPct": number from 0-100 (e.g. 80 for 80%),
-  "supportCost": number or 0,
-  "notes": "brief explanation of how you interpreted the deal, especially any ambiguities"
-}
-
-Important rules:
-- Only return valid JSON, no markdown formatting, no code fences
-- If the deal language is ambiguous, pick the most likely interpretation and explain in notes
-- If support is explicitly included in expenses, set supportCost to 0
-- Ticket price should be the advance price if two prices are listed (adv/dos)
-- artistPct should be a whole number (80 not 0.80)
-- If you see "retro at sellout" or percentage changes at certain thresholds, note it but map to the base deal type`;
-
-export function getApiKey() {
-  return localStorage.getItem(STORAGE_KEY_API) || '';
-}
-
-export function setApiKey(key) {
-  if (key) {
-    localStorage.setItem(STORAGE_KEY_API, key.trim());
-  } else {
-    localStorage.removeItem(STORAGE_KEY_API);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Server error (${response.status})`);
   }
+
+  return await response.json();
 }
-
-const SUMMARY_PROMPT = `You are a music marketing strategist writing a short summary for an artist about their show deal and whether promotion makes sense. Your tone is direct, specific, and conversational — no fluff, no jargon. You're talking to the artist like a trusted advisor.
-
-You will receive a JSON object with the full calculator results for a show. Write a summary that covers:
-
-1. What the deal pays — the guarantee (if any), when backend kicks in, what happens above backend
-2. The key ticket numbers — backend threshold, where the artist is projected, venue expectation if set
-3. What promotion does to their take-home — the before/after comparison
-4. Recommended approach — how much to spend on ads and why
-
-Rules:
-- Never say "don't promote" or "promotion is not worth it"
-- If promo doesn't break even financially, frame it as: market-building, getting in front of new fans, showing the venue a strong turnout for a better deal next time
-- Use specific dollar amounts and ticket numbers, not vague language
-- Keep it to 3-5 short paragraphs
-- Do not use markdown formatting, bullet points, or headers — write it as plain conversational text that can be pasted into an email
-- Do not use dollar signs — spell out "dollars" or just use the number with "bucks" or leave the currency implicit (e.g. "take-home goes from 1,000 to 1,400")
-- Address the artist as "you" and the promoter (the user) as "we"
-- Only return the summary text, nothing else`;
 
 export async function generateArtistSummary(showName, results, inputs) {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('No API key set. Click the gear icon in the header to add your Anthropic API key.');
-  }
-
   const context = {
     showName: showName || 'This show',
     dealType: inputs.dealTypeId,
@@ -103,90 +41,17 @@ export async function generateArtistSummary(showName, results, inputs) {
     recommendation: results.recommendation,
   };
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('/api/summary', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: SUMMARY_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `Generate an artist-facing summary for this show:\n\n${JSON.stringify(context, null, 2)}`,
-        },
-      ],
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ showName, context }),
   });
 
   if (!response.ok) {
-    const err = await response.text();
-    if (response.status === 401) {
-      throw new Error('Invalid API key. Check your key in settings.');
-    }
-    throw new Error(`API error (${response.status}): ${err}`);
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Server error (${response.status})`);
   }
 
   const data = await response.json();
-  const content = data.content?.[0]?.text;
-  if (!content) {
-    throw new Error('Empty response from Claude.');
-  }
-
-  return content.trim();
-}
-
-export async function parseDealText(text) {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('No API key set. Click the gear icon in the header to add your Anthropic API key.');
-  }
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `Parse this deal:\n\n${text}`,
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    if (response.status === 401) {
-      throw new Error('Invalid API key. Check your key in settings.');
-    }
-    throw new Error(`API error (${response.status}): ${err}`);
-  }
-
-  const data = await response.json();
-  const content = data.content?.[0]?.text;
-  if (!content) {
-    throw new Error('Empty response from Claude.');
-  }
-
-  try {
-    // Strip markdown code fences if present
-    const cleaned = content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-    return JSON.parse(cleaned);
-  } catch {
-    throw new Error('Could not parse Claude response as JSON. Response: ' + content.substring(0, 200));
-  }
+  return data.summary;
 }

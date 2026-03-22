@@ -20,7 +20,6 @@
       <button class="header-saved-btn" id="sidebar-open" title="View saved deals">
         Saved Deals <span class="badge" id="saved-count-header"></span>
       </button>
-      <button class="header-gear-btn" id="settings-open" title="Settings">&#9881;</button>
     </div>
   </div>
 </header>
@@ -33,7 +32,7 @@
   <section class="inputs-panel" id="inputs-panel">
 
     <div class="input-section parse-section">
-      <h2>Paste Deal Language</h2>
+      <h2>Paste Deal Details</h2>
       <textarea id="deal-text" rows="3" placeholder="e.g. $1,000 vs 85% after $955, 140 cap, $20 adv / $22 dos, support $150"></textarea>
       <button type="button" id="parse-deal-btn" class="btn-parse">Parse Deal</button>
       <p id="parse-status" class="parse-status"></p>
@@ -390,28 +389,6 @@
     <div id="saved-list"></div>
   </aside>
 
-</div>
-
-<!-- Settings Modal -->
-<div class="modal-overlay" id="settings-modal" style="display:none">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>Settings</h2>
-      <button class="modal-close" id="settings-close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="field">
-        <label for="api-key-input">Anthropic API Key</label>
-        <input type="password" id="api-key-input" placeholder="sk-ant-...">
-        <span class="hint">Required for the "Parse Deal" feature. Your key is stored locally in your browser and sent only to Anthropic's API.</span>
-      </div>
-      <div class="modal-actions">
-        <button type="button" id="save-api-key" class="btn-primary" style="width:auto; margin:0">Save Key</button>
-        <button type="button" id="clear-api-key" class="btn-secondary">Clear Key</button>
-      </div>
-      <p id="api-key-status" class="parse-status"></p>
-    </div>
-  </div>
 </div>
 
 <script type="module" src="js/app.js"></script>
