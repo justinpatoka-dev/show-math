@@ -192,6 +192,95 @@ header .subtitle {
   margin-top: 1px;
 }
 
+/* Info button */
+.info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--silver-light);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  vertical-align: middle;
+  margin-left: 4px;
+  padding: 0;
+  line-height: 1;
+}
+.info-btn:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* Info panel */
+.deal-info-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  position: relative;
+  box-shadow: var(--shadow);
+}
+.deal-info-panel .info-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0;
+  line-height: 1;
+}
+.deal-info-panel .info-close:hover { color: var(--text); }
+.deal-info-panel h3 {
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.deal-info-panel p {
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+.deal-info-panel .deal-info-example {
+  background: var(--accent-light);
+  padding: 8px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  color: var(--text);
+  margin-top: 4px;
+}
+.deal-info-panel .deal-info-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.deal-info-panel .deal-info-nav button {
+  padding: 3px 8px;
+  font-size: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--silver-light);
+  cursor: pointer;
+  font-family: inherit;
+}
+.deal-info-panel .deal-info-nav button.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

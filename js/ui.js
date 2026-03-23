@@ -45,6 +45,7 @@ export function readInputs() {
     ticketsWith: val('tickets-with'),
     merchSpend: val('merch-spend'),
     merchMargin: val('merch-margin') / 100,
+    promoterProfitPct: val('promoter-profit') / 100,
   };
 }
 
@@ -75,6 +76,7 @@ export function populateInputs(inputs) {
   set('tickets-with', inputs.ticketsWith);
   set('merch-spend', inputs.merchSpend);
   set('merch-margin', (inputs.merchMargin * 100));
+  set('promoter-profit', (inputs.promoterProfitPct || 0) * 100);
 
   // Rebuild bonus tiers
   const container = document.getElementById('bonus-tiers-container');
@@ -102,6 +104,7 @@ export function updateFieldVisibility(dealTypeId) {
   toggle('guarantee-group', dt.fields.guarantee);
   toggle('expenses-group', dt.fields.expenses);
   toggle('artist-pct-group', dt.fields.artistPercentage);
+  toggle('promoter-profit-group', dt.fields.promoterProfit);
 }
 
 // ============================================

@@ -4,6 +4,7 @@ import { calculateScenario } from './calculator.js';
 import { readInputs, populateInputs, renderResults, updateFieldVisibility, addBonusTierRow, renderSavedScenarios } from './ui.js';
 import { saveScenario, loadScenarios, deleteScenario, getScenario } from './storage.js';
 import { parseDealText, generateArtistSummary } from './claude.js';
+import { DEAL_TYPES } from './dealTypes.js';
 
 let lastResults = null;
 let withPromoManuallyEdited = false;
@@ -40,6 +41,40 @@ document.addEventListener('DOMContentLoaded', () => {
   dealTypeSelect.addEventListener('change', () => {
     updateFieldVisibility(dealTypeSelect.value);
     recalculate();
+  });
+
+  // Deal info panel
+  const infoBtn = document.getElementById('deal-info-btn');
+  const infoPanel = document.getElementById('deal-info-panel');
+  const infoContent = document.getElementById('deal-info-content');
+  const infoClose = document.getElementById('deal-info-close');
+
+  function renderDealInfo(activeId) {
+    const nav = DEAL_TYPES.map(dt =>
+      `<button class="${dt.id === activeId ? 'active' : ''}" data-id="${dt.id}">${dt.label}</button>`
+    ).join('');
+    const dt = DEAL_TYPES.find(d => d.id === activeId);
+    infoContent.innerHTML = `
+      <div class="deal-info-nav">${nav}</div>
+      <h3>${dt.label}</h3>
+      <p>${dt.definition}</p>
+      <div class="deal-info-example"><strong>Example:</strong> ${dt.example}</div>
+    `;
+    infoContent.querySelectorAll('.deal-info-nav button').forEach(btn => {
+      btn.addEventListener('click', () => renderDealInfo(btn.dataset.id));
+    });
+  }
+
+  infoBtn.addEventListener('click', () => {
+    if (infoPanel.style.display === 'none') {
+      renderDealInfo(dealTypeSelect.value);
+      infoPanel.style.display = 'block';
+    } else {
+      infoPanel.style.display = 'none';
+    }
+  });
+  infoClose.addEventListener('click', () => {
+    infoPanel.style.display = 'none';
   });
 
   // Add bonus tier button

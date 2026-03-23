@@ -12,7 +12,7 @@ export function calculateScenario(inputs) {
   if (!dealType) return null;
 
   const backend = dealType.calculateBackend
-    ? dealType.calculateBackend(inputs.ticketPrice, inputs.guarantee, inputs.artistPct, inputs.expenses)
+    ? dealType.calculateBackend(inputs.ticketPrice, inputs.guarantee, inputs.artistPct, inputs.expenses, inputs.promoterProfitPct)
     : null;
 
   const withoutPromo = calculateSide(dealType, inputs, inputs.ticketsWithout);
@@ -80,7 +80,7 @@ function calculateSide(dealType, inputs, tickets) {
   const effectiveArtistPct = activePctTier ? activePctTier.newPct : inputs.artistPct;
 
   const basePayout = dealType.calculatePayout(
-    tickets, inputs.ticketPrice, inputs.guarantee, effectiveArtistPct, inputs.expenses
+    tickets, inputs.ticketPrice, inputs.guarantee, effectiveArtistPct, inputs.expenses, inputs.promoterProfitPct
   );
 
   const bonusEarned = calculateBonuses(inputs.bonusTiers, tickets, inputs.capacity);

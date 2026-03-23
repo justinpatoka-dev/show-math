@@ -50,7 +50,7 @@
     <div class="input-section">
       <h2>Deal Setup</h2>
       <div class="field">
-        <label for="deal-type">Deal Type</label>
+        <label for="deal-type">Deal Type <button type="button" class="info-btn" id="deal-info-btn" title="What do these deal types mean?">?</button></label>
         <select id="deal-type">
           <option value="flat_guarantee">Flat Guarantee</option>
           <option value="door_deal" selected>Door Deal</option>
@@ -58,6 +58,10 @@
           <option value="guarantee_vs_net">Guarantee vs % of Net</option>
           <option value="guarantee_plus_after_expenses">Guarantee + % After Expenses</option>
         </select>
+        <div class="deal-info-panel" id="deal-info-panel" style="display:none;">
+          <button type="button" class="info-close" id="deal-info-close">&times;</button>
+          <div id="deal-info-content"></div>
+        </div>
       </div>
       <div class="field" id="guarantee-group">
         <label for="guarantee">Guarantee</label>
@@ -81,6 +85,11 @@
       <div class="field" id="artist-pct-group">
         <label for="artist-pct">Artist Percentage</label>
         <div class="input-with-suffix"><input type="number" id="artist-pct" value="80" min="0" max="100" step="1"><span>%</span></div>
+      </div>
+      <div class="field" id="promoter-profit-group" style="display:none;">
+        <label for="promoter-profit">Promoter Profit</label>
+        <div class="input-with-suffix"><input type="number" id="promoter-profit" value="15" min="0" max="100" step="1"><span>%</span></div>
+        <span class="hint">Added to expenses before calculating the split point (typically 15%)</span>
       </div>
     </div>
 
