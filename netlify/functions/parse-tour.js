@@ -36,9 +36,24 @@ Return an array of show objects. For each show, extract whatever is available:
     "capacity": number or null,
     "supportCost": number or null,
     "agentPct": 0.15,
-    "notes": "any extra info like 'includes support' or 'retro at sellout' or support acts"
+    "notes": "any extra info like 'includes support' or support acts",
+    "bonusTiers": [
+      {
+        "type": "pct_capacity" or "ticket_count",
+        "threshold": number,
+        "bonusMode": "dollar" or "pct_change",
+        "amount": number or 0,
+        "newPct": number (0-100) or 0
+      }
+    ]
   }
 ]
+
+Bonus tier examples:
+- "Bonus switches to 70% at 100% sold" → { "type": "pct_capacity", "threshold": 100, "bonusMode": "pct_change", "newPct": 70 }
+- "Retro at sellout to 70%" → { "type": "pct_capacity", "threshold": 100, "bonusMode": "pct_change", "newPct": 70 }
+- "$500 bonus at 200 tickets" → { "type": "ticket_count", "threshold": 200, "bonusMode": "dollar", "amount": 500 }
+- If no bonus tiers, return empty array: []
 
 Rules:
 - If a field isn't in the data, use null

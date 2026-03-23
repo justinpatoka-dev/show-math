@@ -195,7 +195,13 @@ async function handleParseDeal() {
       agentPct: 0.15, // keep default
       supportCost: parsed.supportCost || 0,
       venueExpectation: 0,
-      bonusTiers: [],
+      bonusTiers: (parsed.bonusTiers || []).map(t => ({
+        type: t.type || 'pct_capacity',
+        threshold: t.threshold || 0,
+        bonusMode: t.bonusMode || 'dollar',
+        amount: t.amount || 0,
+        newPct: (t.newPct || 0) / 100,
+      })),
       marketingFee: 0,
       adSpend: 0,
       costPerTicket: 6,

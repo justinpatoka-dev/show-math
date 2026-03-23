@@ -338,31 +338,44 @@ export function addBonusTierRow(data = {}) {
   const showDollar = bonusMode === 'dollar' ? '' : 'style="display:none"';
   const showPct = bonusMode === 'pct_change' ? '' : 'style="display:none"';
   row.innerHTML = `
-    <select class="tier-type">
-      <option value="pct_capacity" ${data.type === 'pct_capacity' ? 'selected' : ''}>% of Capacity</option>
-      <option value="ticket_count" ${data.type === 'ticket_count' ? 'selected' : ''}>Ticket Count</option>
-    </select>
-    <input type="number" class="tier-threshold" placeholder="Threshold" value="${data.threshold || ''}" min="0">
-    <select class="tier-bonus-mode">
-      <option value="dollar" ${bonusMode === 'dollar' ? 'selected' : ''}>Dollar Bonus</option>
-      <option value="pct_change" ${bonusMode === 'pct_change' ? 'selected' : ''}>% Changes To</option>
-    </select>
-    <input type="number" class="tier-amount" placeholder="Bonus $" value="${data.amount || ''}" min="0" ${showDollar}>
-    <input type="number" class="tier-new-pct" placeholder="New %" value="${data.newPct ? Math.round(data.newPct * 100) : ''}" min="0" max="100" ${showPct}>
-    <button class="remove-tier" type="button" title="Remove tier">&times;</button>
+    <div class="tier-line-1">
+      <label class="tier-label">Trigger</label>
+      <select class="tier-type">
+        <option value="pct_capacity" ${data.type === 'pct_capacity' ? 'selected' : ''}>% of Capacity</option>
+        <option value="ticket_count" ${data.type === 'ticket_count' ? 'selected' : ''}>Ticket Count</option>
+      </select>
+      <label class="tier-label">At</label>
+      <input type="number" class="tier-threshold" placeholder="e.g. 100" value="${data.threshold || ''}" min="0">
+      <button class="remove-tier" type="button" title="Remove tier">&times;</button>
+    </div>
+    <div class="tier-line-2">
+      <label class="tier-label">Bonus</label>
+      <select class="tier-bonus-mode">
+        <option value="dollar" ${bonusMode === 'dollar' ? 'selected' : ''}>Dollar Bonus</option>
+        <option value="pct_change" ${bonusMode === 'pct_change' ? 'selected' : ''}>% Changes To</option>
+      </select>
+      <div class="tier-value-dollar" ${showDollar}>
+        <span class="tier-prefix">$</span>
+        <input type="number" class="tier-amount" placeholder="500" value="${data.amount || ''}" min="0">
+      </div>
+      <div class="tier-value-pct" ${showPct}>
+        <input type="number" class="tier-new-pct" placeholder="70" value="${data.newPct ? Math.round(data.newPct * 100) : ''}" min="0" max="100">
+        <span class="tier-suffix">%</span>
+      </div>
+    </div>
   `;
 
   // Toggle dollar vs percentage fields
   const modeSelect = row.querySelector('.tier-bonus-mode');
-  const amountInput = row.querySelector('.tier-amount');
-  const pctInput = row.querySelector('.tier-new-pct');
+  const dollarDiv = row.querySelector('.tier-value-dollar');
+  const pctDiv = row.querySelector('.tier-value-pct');
   modeSelect.addEventListener('change', () => {
     if (modeSelect.value === 'dollar') {
-      amountInput.style.display = '';
-      pctInput.style.display = 'none';
+      dollarDiv.style.display = '';
+      pctDiv.style.display = 'none';
     } else {
-      amountInput.style.display = 'none';
-      pctInput.style.display = '';
+      dollarDiv.style.display = 'none';
+      pctDiv.style.display = '';
     }
     document.getElementById('inputs-panel').dispatchEvent(new Event('input', { bubbles: true }));
   });

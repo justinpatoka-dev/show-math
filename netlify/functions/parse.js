@@ -35,7 +35,23 @@ Important rules:
 - If support is explicitly included in expenses, set supportCost to 0
 - Ticket price should be the advance price if two prices are listed (adv/dos)
 - artistPct should be a whole number (80 not 0.80)
-- If you see "retro at sellout" or percentage changes at certain thresholds, note it but map to the base deal type`;
+- If you see "retro at sellout" or "switches to X% at Y" or percentage changes at certain thresholds, include them in the bonusTiers array
+
+Also return a bonusTiers array. Each bonus tier is an object:
+{
+  "type": "pct_capacity" or "ticket_count",
+  "threshold": number (percentage like 100 for 100% capacity, or ticket count),
+  "bonusMode": "dollar" or "pct_change",
+  "amount": number (dollar amount, only if bonusMode is "dollar"),
+  "newPct": number from 0-100 (new artist percentage, only if bonusMode is "pct_change")
+}
+
+Examples:
+- "Bonus switches to 70% at 100% sold" → { "type": "pct_capacity", "threshold": 100, "bonusMode": "pct_change", "newPct": 70 }
+- "Retro at sellout to 70%" → { "type": "pct_capacity", "threshold": 100, "bonusMode": "pct_change", "newPct": 70 }
+- "$500 bonus at 200 tickets" → { "type": "ticket_count", "threshold": 200, "bonusMode": "dollar", "amount": 500 }
+
+If no bonus tiers, return an empty array: "bonusTiers": []`;
 
 export default async (req) => {
   if (req.method !== 'POST') {

@@ -324,11 +324,11 @@ header .subtitle {
 
 /* Bonus tiers */
 .bonus-tier-row {
-  display: grid;
-  grid-template-columns: 1fr 80px 80px 32px;
-  gap: 6px;
-  margin-bottom: 6px;
-  align-items: center;
+  background: var(--accent-light);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin-bottom: 8px;
 }
 .bonus-tier-row select, .bonus-tier-row input {
   padding: 5px 6px;
@@ -340,6 +340,47 @@ header .subtitle {
   font-size: 12px;
   font-family: 'Inter', sans-serif;
 }
+.tier-line-1, .tier-line-2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tier-line-1 {
+  margin-bottom: 6px;
+}
+.tier-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  min-width: 42px;
+}
+.tier-line-1 select {
+  flex: 1;
+  min-width: 0;
+}
+.tier-line-1 input {
+  width: 70px;
+}
+.tier-line-2 select {
+  flex: 0 0 auto;
+  min-width: 110px;
+}
+.tier-value-dollar, .tier-value-pct {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.tier-prefix, .tier-suffix {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.tier-value-dollar input, .tier-value-pct input {
+  width: 70px;
+}
 .remove-tier {
   background: none;
   border: none;
@@ -348,6 +389,7 @@ header .subtitle {
   cursor: pointer;
   padding: 0;
   line-height: 1;
+  margin-left: auto;
 }
 .remove-tier:hover { color: var(--negative); }
 
