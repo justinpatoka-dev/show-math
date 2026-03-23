@@ -1,3 +1,26 @@
+const TOUR_SUMMARY_PROMPT = `You are a music marketing strategist writing a tour promotion plan for an artist. Your tone is direct, specific, and conversational — like a trusted advisor breaking down the plan.
+
+You will receive a JSON array of shows with deal details, current ticket counts, allocated ad spend, and show type classifications (money vs build).
+
+Write a tour-level summary that covers:
+
+1. OVERVIEW: How many shows, total budget, what the plan accomplishes
+2. PRIORITY SHOWS: Call out the 3-5 most important shows and why (biggest rooms, best ROI, key markets)
+3. MONEY SHOWS: Which shows have strong earning potential above backend — emphasize the return
+4. BUILD SHOWS: Which shows are market investments — frame as getting in front of new people and building for next time
+5. BUDGET ALLOCATION: Brief explanation of how the budget is spread and why some shows get more
+6. TIMELINE: When ads should start for early shows vs later shows
+7. WHAT WE NEED FROM YOU: Ask the artist to share on socials, any specific markets where their engagement would help
+
+Rules:
+- Never say "don't promote" or "skip this show"
+- Use specific numbers — ticket counts, dollar amounts, venue names
+- Keep it to 5-7 short paragraphs
+- Do not use markdown formatting, bullet points, or headers — write it as plain conversational text for an email
+- Do not use dollar signs — spell out "dollars" or leave currency implicit
+- Address the artist as "you" and the promoter as "we"
+- Only return the summary text, nothing else`;
+
 const SUMMARY_PROMPT = `You are a music marketing strategist writing a short summary for an artist about their show deal and whether promotion makes sense. Your tone is direct, specific, and conversational — no fluff, no jargon. You're talking to the artist like a trusted advisor.
 
 You will receive a JSON object with the full calculator results for a show. Write a summary that covers:
@@ -36,12 +59,25 @@ export default async (req) => {
   }
 
   try {
-    const { showName, context } = await req.json();
-    if (!context) {
-      return new Response(JSON.stringify({ error: 'No context provided.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const body = await req.json();
+    const { type } = body;
+
+    let systemPrompt, userMessage;
+
+    if (type === 'tour') {
+      const { artist, totalBudget, marketingFee, shows } = body;
+      systemPrompt = TOUR_SUMMARY_PROMPT;
+      userMessage = `Generate a tour promotion plan summary for ${artist}.\n\nTotal ad budget: ${totalBudget}\nMarketing fee per show: ${marketingFee}\n\nShows:\n${JSON.stringify(shows, null, 2)}`;
+    } else {
+      const { showName, context } = body;
+      if (!context) {
+        return new Response(JSON.stringify({ error: 'No context provided.' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      systemPrompt = SUMMARY_PROMPT;
+      userMessage = `Generate an artist-facing summary for this show:\n\n${JSON.stringify(context, null, 2)}`;
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -53,12 +89,12 @@ export default async (req) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        system: SUMMARY_PROMPT,
+        max_tokens: 2048,
+        system: systemPrompt,
         messages: [
           {
             role: 'user',
-            content: `Generate an artist-facing summary for this show:\n\n${JSON.stringify(context, null, 2)}`,
+            content: userMessage,
           },
         ],
       }),

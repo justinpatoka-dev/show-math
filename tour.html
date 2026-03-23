@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Show Math — Tour Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Jost:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* Tour-specific styles */
+    .tour-layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .tour-setup {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .tour-setup .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .tour-globals {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .tour-globals .field label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .tour-globals .field input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .paste-area textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 13px;
+      resize: vertical;
+    }
+
+    .btn-parse-tour {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Jost', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+    }
+
+    .btn-parse-tour:hover { opacity: 0.9; }
+    .btn-parse-tour:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #parse-tour-status {
+      font-size: 12px;
+      margin-top: 6px;
+      min-height: 18px;
+    }
+
+    /* Budget summary bar */
+    .budget-bar {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      font-size: 13px;
+    }
+
+    .budget-bar .budget-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .budget-bar .budget-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .budget-bar .budget-value {
+      font-family: 'Jost', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .budget-bar .budget-value.over { color: var(--negative); }
+    .budget-bar .budget-value.under { color: var(--positive); }
+
+    /* Tour table */
+    .tour-table-wrapper {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+
+    .tour-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .tour-table th {
+      background: var(--accent);
+      color: white;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .tour-table th:hover {
+      background: #333;
+    }
+
+    .tour-table th .sort-arrow {
+      margin-left: 4px;
+      font-size: 9px;
+    }
+
+    .tour-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-light);
+      white-space: nowrap;
+    }
+
+    .tour-table tr:hover td {
+      background: var(--accent-light);
+    }
+
+    .tour-table tr.off-day td {
+      color: var(--text-secondary);
+      font-style: italic;
+      background: #f0f0f0;
+    }
+
+    .tour-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tour-table td.editable {
+      position: relative;
+    }
+
+    .tour-table td.editable input {
+      width: 60px;
+      padding: 2px 4px;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-family: inherit;
+      text-align: right;
+    }
+
+    .tour-table td.editable input:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    /* Type badges */
+    .type-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .type-badge.money {
+      background: var(--positive-bg);
+      color: var(--positive);
+    }
+
+    .type-badge.build {
+      background: var(--warning-bg);
+      color: var(--warning);
+    }
+
+    .type-badge.skip {
+      background: #eee;
+      color: #999;
+    }
+
+    /* Priority badges */
+    .priority-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .priority-badge.heavy {
+      background: var(--negative-bg);
+      color: var(--negative);
+    }
+
+    .priority-badge.light {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .priority-badge.none {
+      background: #eee;
+      color: #999;
+    }
+
+    /* Status text */
+    .status-positive { color: var(--positive); }
+    .status-negative { color: var(--negative); }
+    .status-warning { color: var(--warning); }
+
+    /* Generate summary button */
+    .btn-summary {
+      margin-top: 16px;
+      padding: 12px 24px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Jost', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+    }
+
+    .btn-summary:hover { opacity: 0.9; }
+
+    .summary-output {
+      margin-top: 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      white-space: pre-wrap;
+      font-size: 13px;
+      line-height: 1.6;
+      display: none;
+    }
+
+    .summary-output.visible { display: block; }
+
+    .btn-copy {
+      margin-top: 8px;
+      padding: 6px 16px;
+      background: var(--silver);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .tour-setup { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <h1>Show Math</h1>
+      <p class="subtitle">Tour Planner</p>
+    </div>
+    <div class="header-actions">
+      <a href="index.html" style="color: white; font-size: 12px; text-decoration: none; border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 2px;">Single Show Calculator</a>
+    </div>
+  </div>
+</header>
+
+<main class="tour-layout">
+
+  <!-- Setup row -->
+  <div class="tour-setup">
+
+    <!-- Paste deal sheet -->
+    <div class="card paste-area">
+      <h2 style="font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Paste Deal Sheet</h2>
+      <textarea id="deal-sheet-text" placeholder="Paste the full deal sheet here — dates, venues, deal terms, ticket prices, capacities. Any format works."></textarea>
+      <button type="button" id="parse-tour-btn" class="btn-parse-tour">Parse All Shows</button>
+      <p id="parse-tour-status"></p>
+    </div>
+
+    <!-- Global settings -->
+    <div class="card">
+      <h2 style="font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Tour Settings</h2>
+      <div class="tour-globals">
+        <div class="field">
+          <label>Artist</label>
+          <input type="text" id="tour-artist" placeholder="Artist name">
+        </div>
+        <div class="field">
+          <label>Total Ad Budget</label>
+          <input type="number" id="tour-budget" value="2000" min="0" step="100">
+        </div>
+        <div class="field">
+          <label>Min Spend (Heavy)</label>
+          <input type="number" id="min-spend-heavy" value="150" min="0" step="10">
+        </div>
+        <div class="field">
+          <label>Min Spend (Light)</label>
+          <input type="number" id="min-spend-light" value="120" min="0" step="10">
+        </div>
+        <div class="field">
+          <label>Marketing Fee</label>
+          <input type="number" id="tour-marketing-fee" value="145" min="0" step="5">
+        </div>
+        <div class="field">
+          <label>Cost Per Ticket</label>
+          <input type="number" id="tour-cpt" value="6" min="1" step="0.5">
+        </div>
+        <div class="field">
+          <label>Merch/Attendee</label>
+          <input type="number" id="tour-merch" value="5" min="0" step="1">
+        </div>
+        <div class="field">
+          <label>Merch Margin %</label>
+          <input type="number" id="tour-merch-margin" value="60" min="0" max="100" step="5">
+        </div>
+      </div>
+      <button type="button" id="allocate-btn" class="btn-parse-tour" style="margin-top: 12px;">Allocate Budget</button>
+    </div>
+
+  </div>
+
+  <!-- Budget summary -->
+  <div class="budget-bar" id="budget-bar" style="display: none;">
+    <div class="budget-item">
+      <span class="budget-label">Total Budget</span>
+      <span class="budget-value" id="budget-total">-</span>
+    </div>
+    <div class="budget-item">
+      <span class="budget-label">Allocated</span>
+      <span class="budget-value" id="budget-allocated">-</span>
+    </div>
+    <div class="budget-item">
+      <span class="budget-label">Remaining</span>
+      <span class="budget-value" id="budget-remaining">-</span>
+    </div>
+    <div class="budget-item">
+      <span class="budget-label">Shows Promoted</span>
+      <span class="budget-value" id="budget-show-count">-</span>
+    </div>
+    <div class="budget-item">
+      <span class="budget-label">Total Fees</span>
+      <span class="budget-value" id="budget-fees">-</span>
+    </div>
+  </div>
+
+  <!-- Tour table -->
+  <div class="tour-table-wrapper" id="tour-table-wrapper" style="display: none;">
+    <table class="tour-table">
+      <thead>
+        <tr id="tour-header"></tr>
+      </thead>
+      <tbody id="tour-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Summary -->
+  <button type="button" class="btn-summary" id="generate-summary-btn" style="display: none;">Generate Tour Summary for Artist</button>
+  <div class="summary-output" id="summary-output"></div>
+  <button type="button" class="btn-copy" id="copy-summary-btn" style="display: none;">Copy to Clipboard</button>
+
+</main>
+
+<script type="module">
+  import { parseDealSheet, calculateAllShows, allocateBudget, sortShows, recommendAdStart, formatDollar, formatDate } from './js/tour.js';
+
+  // State
+  let shows = [];
+  let currentSort = { field: 'date', dir: 'asc' };
+
+  // Elements
+  const parseBtn = document.getElementById('parse-tour-btn');
+  const parseStatus = document.getElementById('parse-tour-status');
+  const allocateBtn = document.getElementById('allocate-btn');
+  const tableWrapper = document.getElementById('tour-table-wrapper');
+  const tourHeader = document.getElementById('tour-header');
+  const tourBody = document.getElementById('tour-body');
+  const budgetBar = document.getElementById('budget-bar');
+  const summaryBtn = document.getElementById('generate-summary-btn');
+  const summaryOutput = document.getElementById('summary-output');
+  const copyBtn = document.getElementById('copy-summary-btn');
+
+  // Column definitions
+  const columns = [
+    { key: 'date', label: 'Date', sortable: true },
+    { key: 'venue', label: 'Venue', sortable: true },
+    { key: 'market', label: 'Market', sortable: true },
+    { key: 'dealType', label: 'Deal', sortable: true },
+    { key: 'guarantee', label: 'Guarantee', sortable: true, num: true },
+    { key: 'backend', label: 'Backend', sortable: true, num: true },
+    { key: 'capacity', label: 'Cap', sortable: true, num: true },
+    { key: 'currentTickets', label: 'Current Tix', sortable: true, num: true, editable: true },
+    { key: 'showType', label: 'Type', sortable: true },
+    { key: 'priority', label: 'Priority', sortable: true },
+    { key: 'breakEvenAdSpend', label: 'BE Ad Spend', sortable: true, num: true },
+    { key: 'allocatedAdSpend', label: 'Ad Spend', sortable: true, num: true, editable: true },
+    { key: 'estTicketsFromAds', label: 'Est. Tix', num: true },
+    { key: 'adStartDate', label: 'Start Ads', sortable: true },
+    { key: 'status', label: 'Status', sortable: true },
+  ];
+
+  // Deal type labels
+  const dealLabels = {
+    flat_guarantee: 'Flat',
+    door_deal: 'Door',
+    guarantee_vs_gross: 'vs Gross',
+    guarantee_vs_net: 'vs Net',
+    guarantee_plus_after_expenses: '+ After',
+    unknown: '-'
+  };
+
+  // ==========================================
+  // Parse
+  // ==========================================
+
+  parseBtn.addEventListener('click', async () => {
+    const text = document.getElementById('deal-sheet-text').value.trim();
+    if (!text) return;
+
+    parseBtn.disabled = true;
+    parseStatus.textContent = 'Parsing deal sheet...';
+    parseStatus.style.color = '';
+
+    try {
+      const parsed = await parseDealSheet(text);
+      shows = parsed.map(s => ({
+        ...s,
+        currentTickets: s.currentTickets || 0,
+        baselineEstimate: s.baselineEstimate || 0,
+        allocatedAdSpend: 0,
+        priority: 'none',
+        venueExpectation: s.venueExpectation || 0,
+        targetTakeHome: 0,
+        bonusTiers: [],
+      }));
+
+      parseStatus.textContent = `Parsed ${shows.length} shows.`;
+      parseStatus.style.color = 'var(--positive)';
+      recalcAndRender();
+
+    } catch (err) {
+      parseStatus.textContent = err.message;
+      parseStatus.style.color = 'var(--negative)';
+    } finally {
+      parseBtn.disabled = false;
+    }
+  });
+
+  // ==========================================
+  // Allocate budget
+  // ==========================================
+
+  allocateBtn.addEventListener('click', () => {
+    const budget = parseFloat(document.getElementById('tour-budget').value) || 0;
+    const minHeavy = parseFloat(document.getElementById('min-spend-heavy').value) || 150;
+    const minLight = parseFloat(document.getElementById('min-spend-light').value) || 120;
+
+    shows = allocateBudget(shows, budget, minHeavy, minLight);
+    recalcAndRender();
+  });
+
+  // ==========================================
+  // Recalculate and render
+  // ==========================================
+
+  function getGlobalSettings() {
+    return {
+      marketingFee: parseFloat(document.getElementById('tour-marketing-fee').value) || 145,
+      costPerTicket: parseFloat(document.getElementById('tour-cpt').value) || 6,
+      merchSpend: parseFloat(document.getElementById('tour-merch').value) || 5,
+      merchMargin: (parseFloat(document.getElementById('tour-merch-margin').value) || 60) / 100,
+    };
+  }
+
+  function recalcAndRender() {
+    const globals = getGlobalSettings();
+    shows = calculateAllShows(shows, globals);
+    shows = sortShows(shows, currentSort.field, currentSort.dir);
+    renderTable();
+    renderBudgetBar();
+    tableWrapper.style.display = 'block';
+    budgetBar.style.display = 'flex';
+    summaryBtn.style.display = 'block';
+  }
+
+  // ==========================================
+  // Render table
+  // ==========================================
+
+  function renderTable() {
+    const globals = getGlobalSettings();
+
+    // Header
+    tourHeader.innerHTML = columns.map(col => {
+      let arrow = '';
+      if (col.sortable && currentSort.field === col.key) {
+        arrow = `<span class="sort-arrow">${currentSort.dir === 'asc' ? '▲' : '▼'}</span>`;
+      }
+      return `<th data-key="${col.key}">${col.label}${arrow}</th>`;
+    }).join('');
+
+    // Add sort listeners
+    tourHeader.querySelectorAll('th[data-key]').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.key;
+        const col = columns.find(c => c.key === key);
+        if (!col || !col.sortable) return;
+
+        if (currentSort.field === key) {
+          currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          currentSort.field = key;
+          currentSort.dir = 'asc';
+        }
+        shows = sortShows(shows, currentSort.field, currentSort.dir);
+        renderTable();
+      });
+    });
+
+    // Body
+    tourBody.innerHTML = shows.map((show, idx) => {
+      const isOff = show.dealType === 'unknown' || !show.venue || show.venue === 'OFF';
+      const rowClass = isOff ? 'off-day' : '';
+
+      const cells = columns.map(col => {
+        let val = '';
+        const tdClass = col.num ? 'num' : '';
+
+        switch (col.key) {
+          case 'date':
+            val = formatDate(show.date);
+            break;
+          case 'venue':
+            val = show.venue || '-';
+            break;
+          case 'market':
+            val = show.market || '-';
+            break;
+          case 'dealType':
+            val = dealLabels[show.dealType] || show.dealType || '-';
+            break;
+          case 'guarantee':
+            val = show.guarantee ? formatDollar(show.guarantee) : '-';
+            break;
+          case 'backend':
+            val = show.calculated?.backend || '-';
+            break;
+          case 'capacity':
+            val = show.capacity || '-';
+            break;
+          case 'currentTickets':
+            return `<td class="num editable"><input type="number" value="${show.currentTickets || 0}" min="0" data-idx="${idx}" data-field="currentTickets"></td>`;
+          case 'showType':
+            if (isOff) { val = '-'; break; }
+            val = `<span class="type-badge ${show.showType}">${show.showType}</span>`;
+            break;
+          case 'priority':
+            val = `<span class="priority-badge ${show.priority}" data-idx="${idx}">${show.priority === 'none' ? '-' : show.priority}</span>`;
+            break;
+          case 'breakEvenAdSpend':
+            val = show.calculated?.equilibrium?.feasible ? formatDollar(show.calculated.equilibrium.adSpend) : '-';
+            break;
+          case 'allocatedAdSpend':
+            return `<td class="num editable"><input type="number" value="${show.allocatedAdSpend || 0}" min="0" step="10" data-idx="${idx}" data-field="allocatedAdSpend"></td>`;
+          case 'estTicketsFromAds':
+            const cpt = globals.costPerTicket || 6;
+            val = show.allocatedAdSpend ? Math.floor(show.allocatedAdSpend / cpt) : '-';
+            break;
+          case 'adStartDate':
+            if (isOff || !show.date) { val = '-'; break; }
+            const gap = show.calculated?.backend ? Math.max(0, (show.calculated.backend) - (show.currentTickets || 0)) : 30;
+            val = formatDate(recommendAdStart(show.date, gap));
+            break;
+          case 'status':
+            if (isOff) { val = '-'; break; }
+            const statusClass = show.status?.includes('Above') ? 'status-positive' : show.status?.includes('tix') ? 'status-warning' : '';
+            val = `<span class="${statusClass}">${show.status || '-'}</span>`;
+            break;
+        }
+        return `<td class="${tdClass}">${val}</td>`;
+      }).join('');
+
+      return `<tr class="${rowClass}">${cells}</tr>`;
+    }).join('');
+
+    // Inline edit listeners
+    tourBody.querySelectorAll('input[data-field]').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const idx = parseInt(e.target.dataset.idx);
+        const field = e.target.dataset.field;
+        shows[idx][field] = parseFloat(e.target.value) || 0;
+        recalcAndRender();
+      });
+      input.addEventListener('focus', (e) => e.target.select());
+    });
+
+    // Priority toggle
+    tourBody.querySelectorAll('.priority-badge').forEach(badge => {
+      badge.addEventListener('click', () => {
+        const idx = parseInt(badge.dataset.idx);
+        const cycle = ['none', 'light', 'heavy'];
+        const current = cycle.indexOf(shows[idx].priority);
+        shows[idx].priority = cycle[(current + 1) % cycle.length];
+        recalcAndRender();
+      });
+    });
+  }
+
+  // ==========================================
+  // Budget bar
+  // ==========================================
+
+  function renderBudgetBar() {
+    const budget = parseFloat(document.getElementById('tour-budget').value) || 0;
+    const fee = parseFloat(document.getElementById('tour-marketing-fee').value) || 145;
+    const allocated = shows.reduce((sum, s) => sum + (s.allocatedAdSpend || 0), 0);
+    const promotedCount = shows.filter(s => (s.allocatedAdSpend || 0) > 0).length;
+    const remaining = budget - allocated;
+    const totalFees = promotedCount * fee;
+
+    document.getElementById('budget-total').textContent = formatDollar(budget);
+    document.getElementById('budget-allocated').textContent = formatDollar(allocated);
+
+    const remEl = document.getElementById('budget-remaining');
+    remEl.textContent = formatDollar(remaining);
+    remEl.className = 'budget-value ' + (remaining < 0 ? 'over' : 'under');
+
+    document.getElementById('budget-show-count').textContent = promotedCount;
+    document.getElementById('budget-fees').textContent = formatDollar(totalFees);
+  }
+
+  // ==========================================
+  // Generate summary
+  // ==========================================
+
+  summaryBtn.addEventListener('click', async () => {
+    summaryBtn.disabled = true;
+    summaryBtn.textContent = 'Generating...';
+
+    const artist = document.getElementById('tour-artist').value || 'the artist';
+    const globals = getGlobalSettings();
+    const budget = parseFloat(document.getElementById('tour-budget').value) || 0;
+
+    const showSummaries = shows
+      .filter(s => s.dealType && s.dealType !== 'unknown')
+      .map(s => ({
+        date: s.date,
+        venue: s.venue,
+        market: s.market,
+        dealType: s.dealType,
+        guarantee: s.guarantee,
+        capacity: s.capacity,
+        backend: s.calculated?.backend,
+        showType: s.showType,
+        priority: s.priority,
+        currentTickets: s.currentTickets,
+        allocatedAdSpend: s.allocatedAdSpend,
+        breakEvenAdSpend: s.calculated?.equilibrium?.feasible ? s.calculated.equilibrium.adSpend : null,
+        status: s.status
+      }));
+
+    try {
+      const res = await fetch('/.netlify/functions/summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'tour',
+          artist,
+          totalBudget: budget,
+          marketingFee: globals.marketingFee,
+          shows: showSummaries
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to generate summary');
+
+      const data = await res.json();
+      summaryOutput.textContent = data.summary;
+      summaryOutput.classList.add('visible');
+      copyBtn.style.display = 'inline-block';
+
+    } catch (err) {
+      summaryOutput.textContent = 'Error generating summary: ' + err.message;
+      summaryOutput.classList.add('visible');
+    } finally {
+      summaryBtn.disabled = false;
+      summaryBtn.textContent = 'Generate Tour Summary for Artist';
+    }
+  });
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(summaryOutput.textContent);
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; }, 2000);
+  });
+
+</script>
+
+</body>
+</html>
