@@ -16,10 +16,13 @@ export function readInputs() {
 
   const bonusTiers = [];
   document.querySelectorAll('.bonus-tier-row').forEach(row => {
+    const bonusMode = row.querySelector('.tier-bonus-mode')?.value || 'dollar';
     bonusTiers.push({
       type: row.querySelector('.tier-type')?.value || 'ticket_count',
       threshold: parseFloat(row.querySelector('.tier-threshold')?.value) || 0,
-      amount: parseFloat(row.querySelector('.tier-amount')?.value) || 0,
+      amount: bonusMode === 'dollar' ? (parseFloat(row.querySelector('.tier-amount')?.value) || 0) : 0,
+      bonusMode,
+      newPct: bonusMode === 'pct_change' ? (parseFloat(row.querySelector('.tier-new-pct')?.value) || 0) / 100 : 0,
     });
   });
 
@@ -328,15 +331,39 @@ export function addBonusTierRow(data = {}) {
   const container = document.getElementById('bonus-tiers-container');
   const row = document.createElement('div');
   row.className = 'bonus-tier-row';
+  const bonusMode = data.bonusMode || 'dollar';
+  const showDollar = bonusMode === 'dollar' ? '' : 'style="display:none"';
+  const showPct = bonusMode === 'pct_change' ? '' : 'style="display:none"';
   row.innerHTML = `
     <select class="tier-type">
       <option value="pct_capacity" ${data.type === 'pct_capacity' ? 'selected' : ''}>% of Capacity</option>
       <option value="ticket_count" ${data.type === 'ticket_count' ? 'selected' : ''}>Ticket Count</option>
     </select>
     <input type="number" class="tier-threshold" placeholder="Threshold" value="${data.threshold || ''}" min="0">
-    <input type="number" class="tier-amount" placeholder="Bonus $" value="${data.amount || ''}" min="0">
+    <select class="tier-bonus-mode">
+      <option value="dollar" ${bonusMode === 'dollar' ? 'selected' : ''}>Dollar Bonus</option>
+      <option value="pct_change" ${bonusMode === 'pct_change' ? 'selected' : ''}>% Changes To</option>
+    </select>
+    <input type="number" class="tier-amount" placeholder="Bonus $" value="${data.amount || ''}" min="0" ${showDollar}>
+    <input type="number" class="tier-new-pct" placeholder="New %" value="${data.newPct ? Math.round(data.newPct * 100) : ''}" min="0" max="100" ${showPct}>
     <button class="remove-tier" type="button" title="Remove tier">&times;</button>
   `;
+
+  // Toggle dollar vs percentage fields
+  const modeSelect = row.querySelector('.tier-bonus-mode');
+  const amountInput = row.querySelector('.tier-amount');
+  const pctInput = row.querySelector('.tier-new-pct');
+  modeSelect.addEventListener('change', () => {
+    if (modeSelect.value === 'dollar') {
+      amountInput.style.display = '';
+      pctInput.style.display = 'none';
+    } else {
+      amountInput.style.display = 'none';
+      pctInput.style.display = '';
+    }
+    document.getElementById('inputs-panel').dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
   row.querySelector('.remove-tier').addEventListener('click', () => {
     row.remove();
     document.getElementById('inputs-panel').dispatchEvent(new Event('input', { bubbles: true }));

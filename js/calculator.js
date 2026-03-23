@@ -75,8 +75,12 @@ function calculateSide(dealType, inputs, tickets) {
   const gross = tickets * inputs.ticketPrice;
   const capacityPct = inputs.capacity > 0 ? tickets / inputs.capacity : 0;
 
+  // Check for percentage-change bonus tiers
+  const activePctTier = getActivePctChangeTier(inputs.bonusTiers, tickets, inputs.capacity);
+  const effectiveArtistPct = activePctTier ? activePctTier.newPct : inputs.artistPct;
+
   const basePayout = dealType.calculatePayout(
-    tickets, inputs.ticketPrice, inputs.guarantee, inputs.artistPct, inputs.expenses
+    tickets, inputs.ticketPrice, inputs.guarantee, effectiveArtistPct, inputs.expenses
   );
 
   const bonusEarned = calculateBonuses(inputs.bonusTiers, tickets, inputs.capacity);
@@ -106,17 +110,44 @@ function calculateSide(dealType, inputs, tickets) {
 // Bonus tier calculation
 // ============================================
 
+// Returns the highest active percentage-change tier (if any)
+function getActivePctChangeTier(tiers, tickets, capacity) {
+  if (!tiers || tiers.length === 0) return null;
+  let active = null;
+  for (const tier of tiers) {
+    if (tier.bonusMode !== 'pct_change' || !tier.newPct || tier.newPct <= 0) continue;
+    if (!tier.threshold || tier.threshold <= 0) continue;
+
+    let triggered = false;
+    if (tier.type === 'pct_capacity') {
+      triggered = capacity > 0 && (tickets / capacity) >= (tier.threshold / 100);
+    } else {
+      triggered = tickets >= tier.threshold;
+    }
+
+    if (triggered) {
+      // Use the highest new percentage if multiple tiers are active
+      if (!active || tier.newPct > active.newPct) {
+        active = tier;
+      }
+    }
+  }
+  return active;
+}
+
+// Calculate dollar-amount bonuses only (percentage tiers are handled in calculateSide)
 function calculateBonuses(tiers, tickets, capacity) {
   if (!tiers || tiers.length === 0) return 0;
   let total = 0;
   for (const tier of tiers) {
+    // Skip percentage-change tiers — those modify the payout calculation directly
+    if (tier.bonusMode === 'pct_change') continue;
     if (!tier.threshold || !tier.amount || tier.threshold <= 0 || tier.amount <= 0) continue;
     if (tier.type === 'pct_capacity') {
       if (capacity > 0 && (tickets / capacity) >= (tier.threshold / 100)) {
         total += tier.amount;
       }
     } else {
-      // ticket count
       if (tickets >= tier.threshold) {
         total += tier.amount;
       }
