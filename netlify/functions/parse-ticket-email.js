@@ -82,8 +82,14 @@ ${body}`;
     const content = data.content[0].text.trim();
 
     // Strip markdown code fences if present
-    const cleaned = content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-    const result = JSON.parse(cleaned);
+    let cleaned = content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
+    // Extract just the JSON object if there's extra text
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_ticket_count: false }) };
+    }
+    const result = JSON.parse(jsonMatch[0]);
 
     return {
       statusCode: 200,
