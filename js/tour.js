@@ -21,11 +21,19 @@ export async function parseDealSheet(text) {
   });
 
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Parse failed');
+    const text2 = await res.text();
+    let msg = 'Parse failed';
+    try { msg = JSON.parse(text2).error || msg; } catch (e) { msg = text2.substring(0, 200); }
+    throw new Error(msg);
   }
 
-  const data = await res.json();
+  const rawText = await res.text();
+  let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch (e) {
+    throw new Error('Unexpected token \'' + rawText.charAt(0) + '\', "' + rawText.substring(0, 20) + '"... is not valid JSON');
+  }
   return data.shows;
 }
 

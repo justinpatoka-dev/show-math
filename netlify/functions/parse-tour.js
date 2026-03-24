@@ -1,3 +1,6 @@
+// Extend timeout for large deal sheets (Netlify allows up to 26s on free tier)
+exports.config = { maxDuration: 26 };
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method not allowed' };
@@ -81,7 +84,7 @@ Rules:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4000,
+        max_tokens: 8000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }]
       })
