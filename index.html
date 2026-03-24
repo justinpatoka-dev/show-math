@@ -244,30 +244,9 @@
 
     <div id="ads-results-section">
 
-      <!-- Ad Spend Curve -->
-      <div class="result-card" id="ad-curve-card">
-        <h2>Tickets vs Ad Spend</h2>
-        <div id="ad-curve-container" style="position: relative; width: 100%; height: 220px;">
-          <canvas id="ad-curve-canvas" width="600" height="220" style="width: 100%; height: 100%;"></canvas>
-        </div>
-        <p class="ad-curve-hint" id="ad-curve-hint"></p>
-      </div>
-
       <!-- Break Even Analysis -->
       <div class="result-card breakeven-card">
         <div class="breakeven-columns">
-          <div class="breakeven-col">
-            <h3 class="breakeven-col-title">Ad Spend to Break Even</h3>
-            <div class="breakeven-col-primary">
-              <span class="breakeven-col-label">Ad Spend</span>
-              <span class="breakeven-col-value" id="be-equilibrium">-</span>
-            </div>
-            <div class="breakeven-col-secondary">
-              <span class="breakeven-col-label">Total Tickets Needed</span>
-              <span class="breakeven-col-value-sm" id="be-tickets">-</span>
-            </div>
-            <p class="breakeven-col-hint" id="be-hint"></p>
-          </div>
           <div class="breakeven-col" id="venue-col">
             <h3 class="breakeven-col-title">Ad Spend to Hit Ticket Goal</h3>
             <div class="breakeven-col-primary">
@@ -280,7 +259,28 @@
             </div>
             <p class="breakeven-col-hint" id="be-venue-hint"></p>
           </div>
+          <div class="breakeven-col">
+            <h3 class="breakeven-col-title">Ad Spend to Break Even</h3>
+            <div class="breakeven-col-primary">
+              <span class="breakeven-col-label">Ad Spend</span>
+              <span class="breakeven-col-value" id="be-equilibrium">-</span>
+            </div>
+            <div class="breakeven-col-secondary">
+              <span class="breakeven-col-label">Total Tickets Needed</span>
+              <span class="breakeven-col-value-sm" id="be-tickets">-</span>
+            </div>
+            <p class="breakeven-col-hint" id="be-hint"></p>
+          </div>
         </div>
+      </div>
+
+      <!-- Ad Spend Curve -->
+      <div class="result-card" id="ad-curve-card">
+        <h2>Tickets vs Ad Spend</h2>
+        <div id="ad-curve-container" style="position: relative; width: 100%; height: 220px;">
+          <canvas id="ad-curve-canvas" width="600" height="220" style="width: 100%; height: 100%;"></canvas>
+        </div>
+        <p class="ad-curve-hint" id="ad-curve-hint"></p>
       </div>
 
       <!-- Scenario Comparison -->
