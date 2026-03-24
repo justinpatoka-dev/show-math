@@ -133,15 +133,15 @@ export function renderResults(results) {
     document.getElementById('ms-backend-row').style.display = '';
   }
 
-  // Venue expectation milestone
+  // Ticket goal milestone
   const veInput = document.getElementById('venue-expectation');
-  const venueExp = veInput ? parseFloat(veInput.value) || 0 : 0;
-  if (venueExp > 0) {
-    setCell('ms-venue-tickets', fmt(venueExp));
-    document.getElementById('ms-venue-row').style.display = '';
+  const ticketGoal = veInput ? parseFloat(veInput.value) || 0 : 0;
+  if (ticketGoal > 0) {
+    setCell('ms-goal-tickets', fmt(ticketGoal));
+    document.getElementById('ms-goal-row').style.display = '';
   } else {
-    setCell('ms-venue-tickets', '-');
-    document.getElementById('ms-venue-row').style.display = 'none';
+    setCell('ms-goal-tickets', '-');
+    document.getElementById('ms-goal-row').style.display = 'none';
   }
 
   // Promotability note
@@ -160,19 +160,29 @@ export function renderResults(results) {
     }).join('');
   }
 
-  // ======== PHASE 2: PROMOTION ANALYSIS ========
+  // ======== PHASE 2: AD SPEND ANALYSIS ========
 
-  const hasPromo = r.promoCost > 0 || w.tickets !== p.tickets;
-  const promoSection = document.getElementById('promo-results-section');
-  const promoDivider = document.getElementById('promo-results-divider');
-  if (promoSection) {
-    promoSection.classList.toggle('inactive', !hasPromo);
+  const baseline = parseFloat(document.getElementById('tickets-without')?.value) || 0;
+  const costPerTicket = parseFloat(document.getElementById('cost-per-ticket')?.value) || 0;
+  const currentAdSpend = parseFloat(document.getElementById('ad-spend')?.value) || 0;
+  const marketingFee = parseFloat(document.getElementById('marketing-fee')?.value) || 0;
+  const hasAdsInputs = baseline > 0 && costPerTicket > 0;
+
+  const adsSection = document.getElementById('ads-results-section');
+  const adsDivider = document.getElementById('ads-results-divider');
+  if (adsSection) {
+    adsSection.classList.toggle('inactive', !hasAdsInputs);
   }
-  if (promoDivider) {
-    promoDivider.style.opacity = hasPromo ? '1' : '0.4';
+  if (adsDivider) {
+    adsDivider.style.opacity = hasAdsInputs ? '1' : '0.4';
   }
 
-  // ---- LEFT COLUMN: Break even on promo ----
+  // Draw the ad spend curve
+  if (hasAdsInputs) {
+    drawAdSpendCurve(results, baseline, costPerTicket, ticketGoal, currentAdSpend, marketingFee);
+  }
+
+  // ---- LEFT COLUMN: Break even on ads ----
   const eqEl = document.getElementById('be-equilibrium');
   const eqHint = document.getElementById('be-hint');
   const beTicketsEl = document.getElementById('be-tickets');
@@ -181,10 +191,9 @@ export function renderResults(results) {
     if (results.equilibrium !== null) {
       eqEl.textContent = dollar(results.equilibrium);
       const netGL = results.results?.netGainLoss ?? 0;
-      const currentAdSpend = parseFloat(document.getElementById('ad-spend')?.value) || 0;
       if (eqHint) {
         if (currentAdSpend > 0 && netGL >= 0) {
-          eqHint.textContent = `Promotion is paying for itself. Net gain: ${dollar(netGL)}.`;
+          eqHint.textContent = `Ads are paying for themselves. Net gain: ${dollar(netGL)}.`;
           eqHint.className = 'breakeven-col-hint positive';
         } else if (currentAdSpend > 0 && netGL < 0) {
           eqHint.textContent = `Increase ad spend to ${dollar(results.equilibrium)} to break even.`;
@@ -197,12 +206,10 @@ export function renderResults(results) {
     } else {
       eqEl.textContent = 'N/A';
       if (eqHint) {
-        const mf = parseFloat(document.getElementById('marketing-fee')?.value) || 0;
-        const cpt = parseFloat(document.getElementById('cost-per-ticket')?.value) || 0;
-        if (mf <= 0 && cpt <= 0) {
+        if (marketingFee <= 0 && costPerTicket <= 0) {
           eqHint.textContent = 'Enter marketing fee and cost per ticket.';
         } else {
-          eqHint.textContent = 'Cost per ticket exceeds earnings. Promo does not break even.';
+          eqHint.textContent = 'Cost per ticket exceeds earnings. Ads do not break even.';
         }
         eqHint.className = 'breakeven-col-hint neutral';
       }
@@ -210,10 +217,6 @@ export function renderResults(results) {
   }
 
   if (beTicketsEl) {
-    // Show tickets based on equilibrium ad spend, not current ad spend
-    // This keeps the number static regardless of what the user enters for ad spend
-    const costPerTicket = parseFloat(document.getElementById('cost-per-ticket')?.value) || 0;
-    const baseline = parseFloat(document.getElementById('tickets-without')?.value) || 0;
     if (results.equilibrium !== null && costPerTicket > 0) {
       const equilibriumTickets = baseline + Math.floor(results.equilibrium / costPerTicket);
       beTicketsEl.textContent = fmt(equilibriumTickets);
@@ -222,21 +225,16 @@ export function renderResults(results) {
     }
   }
 
-  // ---- RIGHT COLUMN: Venue expectation ----
-  const venueExp2 = parseFloat(document.getElementById('venue-expectation')?.value) || 0;
-  const venueCol = document.getElementById('venue-col');
+  // ---- RIGHT COLUMN: Ticket goal ----
   const beVenueAdspend = document.getElementById('be-venue-adspend');
   const beVenueTickets = document.getElementById('be-venue-tickets');
   const beVenueHint = document.getElementById('be-venue-hint');
 
-  if (venueExp2 > 0) {
-    const ticketsWithout = parseFloat(document.getElementById('tickets-without')?.value) || 0;
-    const ticketsWith = parseFloat(document.getElementById('tickets-with')?.value) || 0;
-    const costPerTicket = parseFloat(document.getElementById('cost-per-ticket')?.value) || 0;
-    const ticketGap = Math.max(0, venueExp2 - ticketsWithout);
+  if (ticketGoal > 0) {
+    const ticketGap = Math.max(0, ticketGoal - baseline);
     const adSpendNeeded = ticketGap > 0 && costPerTicket > 0 ? ticketGap * costPerTicket : 0;
 
-    if (beVenueTickets) beVenueTickets.textContent = fmt(venueExp2);
+    if (beVenueTickets) beVenueTickets.textContent = fmt(ticketGoal);
     if (beVenueAdspend) {
       if (ticketGap <= 0) {
         beVenueAdspend.textContent = 'Already met';
@@ -248,15 +246,14 @@ export function renderResults(results) {
     }
 
     if (beVenueHint) {
-      const currentAdSpend2 = parseFloat(document.getElementById('ad-spend')?.value) || 0;
       if (ticketGap <= 0) {
-        beVenueHint.textContent = 'On track to hit venue expectation.';
+        beVenueHint.textContent = 'Baseline estimate already meets your ticket goal.';
         beVenueHint.className = 'breakeven-col-hint positive';
-      } else if (currentAdSpend2 >= adSpendNeeded) {
-        beVenueHint.textContent = 'Current ad spend meets venue expectation.';
+      } else if (currentAdSpend >= adSpendNeeded) {
+        beVenueHint.textContent = 'Current ad spend meets your ticket goal.';
         beVenueHint.className = 'breakeven-col-hint positive';
       } else {
-        beVenueHint.textContent = `Increase ad spend to ${dollar(adSpendNeeded)} to hit venue expectation.`;
+        beVenueHint.textContent = `Increase ad spend to ${dollar(adSpendNeeded)} to hit your goal.`;
         beVenueHint.className = 'breakeven-col-hint negative';
       }
     }
@@ -264,7 +261,7 @@ export function renderResults(results) {
     if (beVenueAdspend) beVenueAdspend.textContent = '-';
     if (beVenueTickets) beVenueTickets.textContent = '-';
     if (beVenueHint) {
-      beVenueHint.textContent = 'Enter venue expectation to see this.';
+      beVenueHint.textContent = 'Enter a ticket goal to see this.';
       beVenueHint.className = 'breakeven-col-hint neutral';
     }
   }
@@ -324,6 +321,184 @@ export function renderResults(results) {
   setCell('detail-add-payout', dollar(r.additionalNetPayout));
   setCell('detail-add-merch', dollar(r.additionalMerch));
   setCell('detail-add-income', dollar(r.additionalIncome));
+}
+
+// ============================================
+// Ad Spend Curve Chart
+// ============================================
+
+function drawAdSpendCurve(results, baseline, costPerTicket, ticketGoal, currentAdSpend, marketingFee) {
+  const canvas = document.getElementById('ad-curve-canvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Chart margins
+  const ml = 50, mr = 20, mt = 15, mb = 35;
+  const cw = W - ml - mr;
+  const ch = H - mt - mb;
+
+  // Determine x-axis range (ad spend) — go up to 2x equilibrium or 2x goal ad spend or $2000, whichever is higher
+  const goalAdSpend = ticketGoal > 0 && costPerTicket > 0 ? Math.max(0, ticketGoal - baseline) * costPerTicket : 0;
+  const eqSpend = results.equilibrium || 0;
+  const maxAdSpend = Math.max(500, eqSpend * 1.5, goalAdSpend * 1.5, currentAdSpend * 1.5);
+
+  // Y-axis: tickets
+  const maxTickets = baseline + Math.ceil(maxAdSpend / costPerTicket);
+  const yMax = Math.max(maxTickets, ticketGoal > 0 ? ticketGoal * 1.2 : maxTickets);
+
+  // Helper: data to pixel
+  const xPx = (spend) => ml + (spend / maxAdSpend) * cw;
+  const yPx = (tickets) => mt + ch - (tickets / yMax) * ch;
+
+  // Grid lines
+  ctx.strokeStyle = '#d5d5d5';
+  ctx.lineWidth = 1;
+  const yTicks = 5;
+  for (let i = 0; i <= yTicks; i++) {
+    const y = mt + (ch / yTicks) * i;
+    ctx.beginPath();
+    ctx.moveTo(ml, y);
+    ctx.lineTo(ml + cw, y);
+    ctx.stroke();
+  }
+
+  // Y-axis labels
+  ctx.fillStyle = '#555';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= yTicks; i++) {
+    const val = Math.round((yMax / yTicks) * (yTicks - i));
+    const y = mt + (ch / yTicks) * i;
+    ctx.fillText(val, ml - 6, y);
+  }
+
+  // X-axis labels
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const xTicks = 5;
+  for (let i = 0; i <= xTicks; i++) {
+    const val = Math.round((maxAdSpend / xTicks) * i);
+    const x = ml + (cw / xTicks) * i;
+    ctx.fillText('$' + val, x, mt + ch + 6);
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#888';
+  ctx.font = '10px Jost, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Ad Spend', ml + cw / 2, H - 3);
+  ctx.save();
+  ctx.translate(12, mt + ch / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Tickets', 0, 0);
+  ctx.restore();
+
+  // Baseline horizontal line
+  ctx.strokeStyle = '#aaa';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(ml, yPx(baseline));
+  ctx.lineTo(ml + cw, yPx(baseline));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#888';
+  ctx.font = '9px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('baseline: ' + baseline, ml + 4, yPx(baseline) - 8);
+
+  // Ticket goal horizontal line
+  if (ticketGoal > 0) {
+    ctx.strokeStyle = '#1a7a3a';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath();
+    ctx.moveTo(ml, yPx(ticketGoal));
+    ctx.lineTo(ml + cw, yPx(ticketGoal));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#1a7a3a';
+    ctx.font = '9px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('goal: ' + ticketGoal, ml + 4, yPx(ticketGoal) - 8);
+  }
+
+  // Draw the curve: total tickets = baseline + adSpend/costPerTicket
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  const steps = 100;
+  for (let i = 0; i <= steps; i++) {
+    const spend = (maxAdSpend / steps) * i;
+    const tickets = baseline + Math.floor(spend / costPerTicket);
+    const x = xPx(spend);
+    const y = yPx(tickets);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Break-even marker
+  if (results.equilibrium !== null && results.equilibrium <= maxAdSpend) {
+    const beTickets = baseline + Math.floor(results.equilibrium / costPerTicket);
+    const bx = xPx(results.equilibrium);
+    const by = yPx(beTickets);
+    ctx.fillStyle = '#D4882E';
+    ctx.beginPath();
+    ctx.arc(bx, by, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#D4882E';
+    ctx.font = '9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('break even', bx, by - 10);
+  }
+
+  // Current ad spend marker
+  if (currentAdSpend > 0 && currentAdSpend <= maxAdSpend) {
+    const curTickets = baseline + Math.floor(currentAdSpend / costPerTicket);
+    const cx = xPx(currentAdSpend);
+    const cy = yPx(curTickets);
+    ctx.strokeStyle = '#b5221a';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(cx, mt);
+    ctx.lineTo(cx, mt + ch);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#b5221a';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#b5221a';
+    ctx.font = '9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('current: $' + currentAdSpend, cx, mt + ch + 20);
+  }
+
+  // Hint text
+  const hintEl = document.getElementById('ad-curve-hint');
+  if (hintEl) {
+    if (ticketGoal > 0 && goalAdSpend > 0) {
+      hintEl.textContent = `To reach your goal of ${ticketGoal} tickets from a baseline of ${baseline}, you need ~$${Math.round(goalAdSpend)} in ad spend.`;
+    } else if (results.equilibrium !== null) {
+      const beTickets = baseline + Math.floor(results.equilibrium / costPerTicket);
+      hintEl.textContent = `Break-even at $${results.equilibrium} ad spend (${beTickets} tickets).`;
+    } else {
+      hintEl.textContent = '';
+    }
+  }
 }
 
 // ============================================
@@ -462,11 +637,3 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
-
-function setStatus(id, statusClass, text) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = text;
-  el.className = 'ms-status ' + statusClass;
-}
-

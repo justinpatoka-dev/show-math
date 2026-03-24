@@ -143,7 +143,10 @@ function updateEstimatedTickets() {
   const hintEl = document.getElementById('estimated-ad-tickets');
   if (hintEl) hintEl.textContent = estimated;
 
-  // Auto-fill "With Promotion" unless user has manually overridden it
+  const totalEl = document.getElementById('estimated-total-tickets');
+  if (totalEl) totalEl.textContent = ticketsWithout + estimated;
+
+  // Auto-fill "With Ads" unless user has manually overridden it
   if (!withPromoManuallyEdited) {
     const withEl = document.getElementById('tickets-with');
     if (withEl) withEl.value = ticketsWithout + estimated;

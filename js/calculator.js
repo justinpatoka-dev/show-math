@@ -338,27 +338,27 @@ function generateRecommendation(inputs, dealType, backend, withoutPromo, withPro
 
   // Financial assessment
   if (promoCost <= 0) {
-    financial = 'No promotion costs entered.';
+    financial = 'No ad costs entered.';
   } else if (netGainLoss >= 0) {
-    financial = 'Promotion pays for itself at current projections.';
+    financial = 'Ads pay for themselves at current projections.';
   } else if (netGainLoss >= -(promoCost * 0.15)) {
     financial = 'Close to break-even. A small increase in tickets or decrease in spend could tip it.';
   } else {
     const extraPeople = inputs.ticketsWith - inputs.ticketsWithout;
-    financial = `Promotion costs more than it earns at these numbers, but gets the artist in front of ${extraPeople} more people.`;
+    financial = `Ads cost more than they earn at these numbers, but get the artist in front of ${extraPeople} more people.`;
   }
 
   // Strategic assessment
   if (inputs.venueExpectation && inputs.venueExpectation > 0) {
     const gap = Math.max(0, inputs.venueExpectation - inputs.ticketsWith);
     if (gap <= 0) {
-      strategic = 'On track to meet venue expectation.';
+      strategic = 'On track to hit your ticket goal.';
     } else {
       const adCost = gap * inputs.costPerTicket;
-      strategic = `Need ${gap} more tickets ($${adCost.toLocaleString()} in ad spend) to meet venue expectation of ${inputs.venueExpectation}.`;
+      strategic = `Need ${gap} more tickets ($${adCost.toLocaleString()} in ad spend) to hit your ticket goal of ${inputs.venueExpectation}.`;
     }
   } else {
-    strategic = 'Enter venue expectation to see strategic assessment.';
+    strategic = 'Enter a ticket goal to see strategic assessment.';
   }
 
   return { financial, strategic };

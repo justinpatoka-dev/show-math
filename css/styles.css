@@ -889,10 +889,21 @@ header .subtitle {
 .parse-status.error { color: var(--negative); }
 .parse-status.info { color: var(--text-secondary); font-style: italic; }
 
-/* Promo section dimmed when empty */
-#promo-results-section.inactive {
+/* Ads section dimmed when empty */
+#ads-results-section.inactive {
   opacity: 0.4;
   pointer-events: none;
+}
+
+/* Ad spend curve chart */
+#ad-curve-card {
+  border-left: 4px solid var(--accent);
+}
+.ad-curve-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  min-height: 16px;
 }
 
 /* ============================================

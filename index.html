@@ -115,13 +115,6 @@
     </div>
 
     <div class="input-section">
-      <h2>Venue Expectation</h2>
-      <div class="field">
-        <input type="number" id="venue-expectation" value="" min="0" placeholder="Ticket target the venue considers a good show">
-      </div>
-    </div>
-
-    <div class="input-section">
       <h2>Merch</h2>
       <div class="field-row">
         <div class="field">
@@ -136,44 +129,52 @@
     </div>
 
     <div class="input-divider">
-      <span>Promotion Analysis</span>
+      <span>Ticket Goals & Ads</span>
     </div>
 
     <div class="input-section">
-      <h2>Promotion</h2>
+      <h2>Ticket Goals</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="tickets-without">Est. Tickets Without Ads</label>
+          <input type="number" id="tickets-without" value="50" min="0">
+        </div>
+        <div class="field">
+          <label for="venue-expectation">Ticket Goal</label>
+          <input type="number" id="venue-expectation" value="" min="0" placeholder="Your target ticket count">
+        </div>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <h2>Ad Spend</h2>
       <div class="field-row">
         <div class="field">
           <label for="marketing-fee">Marketing Fee</label>
           <div class="input-with-prefix"><span>$</span><input type="number" id="marketing-fee" value="145" min="0"></div>
         </div>
         <div class="field">
-          <label for="ad-spend">Ad Spend</label>
-          <div class="input-with-prefix"><span>$</span><input type="number" id="ad-spend" value="0" min="0"></div>
+          <label for="cost-per-ticket">Est. Cost Per Ticket</label>
+          <div class="input-with-prefix"><span>$</span><input type="number" id="cost-per-ticket" value="6" min="0" step="0.5"></div>
+          <span class="hint">Typically $6-$8</span>
         </div>
       </div>
       <div class="field">
-        <label for="cost-per-ticket">Est. Cost Per Ticket Acquired</label>
-        <div class="input-with-prefix"><span>$</span><input type="number" id="cost-per-ticket" value="6" min="0" step="0.5"></div>
-        <span class="hint">Typically $6-$8</span>
+        <label for="ad-spend">Ad Spend</label>
+        <div class="input-with-prefix"><span>$</span><input type="number" id="ad-spend" value="0" min="0"></div>
       </div>
     </div>
 
     <div class="estimated-tickets-hint" id="estimated-tickets-hint">
-      Estimated tickets from ad spend: <strong id="estimated-ad-tickets">0</strong>
+      Est. tickets from ads: <strong id="estimated-ad-tickets">0</strong>
+      &nbsp;&middot;&nbsp; Total with ads: <strong id="estimated-total-tickets">50</strong>
     </div>
 
     <div class="input-section">
-      <h2>Ticket Estimates</h2>
-      <div class="field-row">
-        <div class="field">
-          <label for="tickets-without">Without Promotion</label>
-          <input type="number" id="tickets-without" value="50" min="0">
-        </div>
-        <div class="field">
-          <label for="tickets-with">With Promotion</label>
-          <input type="number" id="tickets-with" value="100" min="0">
-          <span class="hint">Auto-filled from ad spend estimate. Override if needed.</span>
-        </div>
+      <div class="field">
+        <label for="tickets-with">Tickets With Ads</label>
+        <input type="number" id="tickets-with" value="50" min="0">
+        <span class="hint">Auto-filled from ad spend. Override if needed.</span>
       </div>
     </div>
 
@@ -206,12 +207,12 @@
             </td>
             <td class="ms-tickets" id="ms-backend-tickets">N/A</td>
           </tr>
-          <tr id="ms-venue-row">
+          <tr id="ms-goal-row" style="display:none">
             <td>
-              <span class="ms-name">Venue Expectation</span>
-              <span class="ms-hint">What the venue considers a good show</span>
+              <span class="ms-name">Ticket Goal</span>
+              <span class="ms-hint">Your target for this show</span>
             </td>
-            <td class="ms-tickets" id="ms-venue-tickets">-</td>
+            <td class="ms-tickets" id="ms-goal-tickets">-</td>
           </tr>
         </tbody>
       </table>
@@ -235,15 +236,24 @@
       </table>
     </div>
 
-    <!-- ======== PHASE 2: PROMOTION ANALYSIS ======== -->
+    <!-- ======== PHASE 2: AD SPEND ANALYSIS ======== -->
 
-    <div class="phase-divider" id="promo-results-divider">
-      <span>Promotion Analysis</span>
+    <div class="phase-divider" id="ads-results-divider">
+      <span>Ad Spend Analysis</span>
     </div>
 
-    <div id="promo-results-section">
+    <div id="ads-results-section">
 
-      <!-- Ad Spend to Break Even -->
+      <!-- Ad Spend Curve -->
+      <div class="result-card" id="ad-curve-card">
+        <h2>Tickets vs Ad Spend</h2>
+        <div id="ad-curve-container" style="position: relative; width: 100%; height: 220px;">
+          <canvas id="ad-curve-canvas" width="600" height="220" style="width: 100%; height: 100%;"></canvas>
+        </div>
+        <p class="ad-curve-hint" id="ad-curve-hint"></p>
+      </div>
+
+      <!-- Break Even Analysis -->
       <div class="result-card breakeven-card">
         <div class="breakeven-columns">
           <div class="breakeven-col">
@@ -259,7 +269,7 @@
             <p class="breakeven-col-hint" id="be-hint"></p>
           </div>
           <div class="breakeven-col" id="venue-col">
-            <h3 class="breakeven-col-title">Ad Spend to Venue Expectation</h3>
+            <h3 class="breakeven-col-title">Ad Spend to Hit Ticket Goal</h3>
             <div class="breakeven-col-primary">
               <span class="breakeven-col-label">Ad Spend</span>
               <span class="breakeven-col-value" id="be-venue-adspend">-</span>
@@ -280,8 +290,8 @@
           <thead>
             <tr>
               <th></th>
-              <th>Without Promo</th>
-              <th>With Promo</th>
+              <th>Without Ads</th>
+              <th>With Ads</th>
             </tr>
           </thead>
           <tbody>
@@ -329,7 +339,7 @@
         </table>
         <div class="gain-loss-row">
           <div class="gain-loss-item primary">
-            <span class="gain-loss-label">Net Gain/Loss from Promotion</span>
+            <span class="gain-loss-label">Net Gain/Loss from Ads</span>
             <span class="result-value" id="net-gain-loss">-</span>
           </div>
         </div>
@@ -384,7 +394,7 @@
         </div>
       </details>
 
-    </div><!-- /promo-results-section -->
+    </div><!-- /ads-results-section -->
 
   </section>
 
