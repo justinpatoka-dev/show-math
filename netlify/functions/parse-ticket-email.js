@@ -20,13 +20,15 @@ exports.handler = async (event) => {
   const systemPrompt = `You are a data extraction assistant. You receive automated venue/ticketing platform emails and extract ticket count information.
 
 Your job:
-1. Determine if this email contains a ticket count report for a live music show
+1. Determine if this email contains an ACTUAL ticket count number for a live music show
 2. If yes, extract the key data
-3. If no (it's a conversation about tickets, a marketing email, etc.), mark it as not a ticket count
+3. If no, mark it as not a ticket count
+
+CRITICAL: Only return is_ticket_count: true if you can extract an ACTUAL NUMERIC ticket count from the email content. If the email looks like a ticket report but the actual numbers are missing (e.g., they are in an attachment you can't read, or behind a link), return is_ticket_count: false. Do NOT guess or infer ticket counts.
 
 Return ONLY valid JSON with no markdown formatting. No code fences.
 
-If it IS a ticket count email, return:
+If it IS a ticket count email WITH an actual number, return:
 {
   "is_ticket_count": true,
   "venue": "venue name",
@@ -37,7 +39,7 @@ If it IS a ticket count email, return:
   "source_platform": "Etix" or "Eventbrite" or "DICE" or "Opendate" or "other"
 }
 
-If it is NOT a ticket count email, return:
+If it is NOT a ticket count email, OR if it lacks an actual numeric ticket count, return:
 {
   "is_ticket_count": false
 }
@@ -49,7 +51,8 @@ Notes:
 - "final" means it's the last count (show date or after)
 - "daily_update" means it's a recurring count before the show
 - If you can't determine the show date, use null
-- If the email is clearly not about a specific show's ticket sales (e.g., it's a newsletter, a conversation, a system notification), mark is_ticket_count as false`;
+- If the email is clearly not about a specific show's ticket sales (e.g., it's a newsletter, a conversation, a system notification), mark is_ticket_count as false
+- If venue or artist name is missing, you may extract them from the subject line, but ticket_count MUST come from the actual email/attachment content — never guess it`;
 
   const userMessage = `From: ${from}
 Subject: ${subject}

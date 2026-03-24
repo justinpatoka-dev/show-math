@@ -19,9 +19,11 @@ const CONFIG = {
   // Your Netlify function URL for Claude parsing
   PARSE_URL: 'https://jovial-marshmallow-41f592.netlify.app/.netlify/functions/parse-ticket-email',
   // How many emails to process per run (to avoid timeout)
-  BATCH_SIZE: 50,
+  BATCH_SIZE: 100,
   // Maximum emails to pull on first run (set high for historical)
-  MAX_INITIAL: 5000
+  MAX_INITIAL: 5000,
+  // Temp folder in Google Drive for PDF conversion
+  TEMP_FOLDER_NAME: '_ticket-parser-temp'
 };
 
 // =====================================================
@@ -48,8 +50,8 @@ function setup() {
   if (!parsed) {
     parsed = ss.insertSheet(CONFIG.PARSED_SHEET);
   }
-  parsed.getRange('A1:H1').setValues([['Email ID', 'Venue', 'Artist', 'Show Date', 'Ticket Count', 'Ticket Type', 'Source Platform', 'Parsed Date']]);
-  parsed.getRange('A1:H1').setFontWeight('bold');
+  parsed.getRange('A1:I1').setValues([['Email ID', 'Email Date', 'Venue', 'Artist', 'Show Date', 'Ticket Count', 'Ticket Type', 'Source Platform', 'Parsed Date']]);
+  parsed.getRange('A1:I1').setFontWeight('bold');
   parsed.setFrozenRows(1);
 
   // Create Log sheet
@@ -149,7 +151,8 @@ function pullEmails() {
 }
 
 /**
- * Parse unparsed emails using Claude via Netlify function
+ * Parse unparsed emails using Claude via Netlify function.
+ * Now extracts text from attachments (PDF, CSV, Excel) and download links.
  */
 function parseEmails() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -169,6 +172,7 @@ function parseEmails() {
 
   const data = raw.getRange(2, 1, lastRow - 1, 7).getValues();
   let processedCount = 0;
+  let extractedCount = 0;
 
   for (let i = 0; i < data.length; i++) {
     const [emailId, date, from, subject, body, hasAttachment, processed] = data[i];
@@ -177,11 +181,31 @@ function parseEmails() {
     if (processedCount >= CONFIG.BATCH_SIZE) break;
 
     try {
-      const result = callClaudeParse(from, subject, body);
+      // Build the full content: body + attachment text + download link text
+      let fullContent = body || '';
+
+      // Extract attachment text if the email has attachments
+      if (hasAttachment === 'Yes') {
+        const attachmentText = extractAttachmentText(emailId);
+        if (attachmentText) {
+          fullContent += '\n\n--- ATTACHMENT CONTENT ---\n' + attachmentText;
+          extractedCount++;
+        }
+      }
+
+      // Extract download link content from body
+      const linkText = extractDownloadLinkText(body);
+      if (linkText) {
+        fullContent += '\n\n--- DOWNLOADED REPORT CONTENT ---\n' + linkText;
+        extractedCount++;
+      }
+
+      const result = callClaudeParse(from, subject, fullContent.substring(0, 8000));
 
       if (result && result.is_ticket_count) {
         parsed.appendRow([
           emailId,
+          date,  // Email date from Raw Emails
           result.venue || '',
           result.artist || '',
           result.show_date || '',
@@ -201,12 +225,234 @@ function parseEmails() {
 
     } catch (e) {
       logAction('Parse Error', 'Email ' + emailId + ': ' + e.message);
+      // Still mark as processed to avoid retrying broken emails forever
+      raw.getRange(i + 2, 7).setValue('Error');
+      processedCount++;
     }
   }
 
-  logAction('Parse Emails', 'Processed ' + processedCount + ' emails');
-  SpreadsheetApp.getUi().alert('Parsed ' + processedCount + ' emails. Check the "Parsed Counts" sheet.');
+  logAction('Parse Emails', 'Processed ' + processedCount + ' emails (' + extractedCount + ' had attachments/links extracted)');
+  SpreadsheetApp.getUi().alert('Parsed ' + processedCount + ' emails (' + extractedCount + ' had attachments/links extracted). Check the "Parsed Counts" sheet.');
 }
+
+// =====================================================
+// ATTACHMENT EXTRACTION
+// =====================================================
+
+/**
+ * Get the original Gmail message by ID and extract text from its attachments.
+ * Supports: PDF, CSV, TSV, TXT, XLS, XLSX
+ */
+function extractAttachmentText(emailId) {
+  let msg;
+  try {
+    msg = GmailApp.getMessageById(emailId);
+  } catch (e) {
+    logAction('Attachment Warning', 'Could not fetch message ' + emailId + ': ' + e.message);
+    return null;
+  }
+
+  const attachments = msg.getAttachments();
+  if (!attachments || attachments.length === 0) return null;
+
+  const textParts = [];
+
+  for (const att of attachments) {
+    const name = att.getName().toLowerCase();
+    const mimeType = att.getContentType();
+
+    try {
+      if (name.endsWith('.csv') || name.endsWith('.tsv') || name.endsWith('.txt') || mimeType === 'text/csv' || mimeType === 'text/plain' || mimeType === 'text/tab-separated-values') {
+        // Text-based files: read directly
+        const text = att.getDataAsString();
+        textParts.push('[File: ' + att.getName() + ']\n' + text.substring(0, 4000));
+
+      } else if (name.endsWith('.pdf') || mimeType === 'application/pdf') {
+        // PDF: upload to Drive, convert to Google Doc, extract text
+        const text = extractTextFromPdfBlob(att);
+        if (text) {
+          textParts.push('[File: ' + att.getName() + ']\n' + text.substring(0, 4000));
+        }
+
+      } else if (name.endsWith('.xlsx') || name.endsWith('.xls') || mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || mimeType === 'application/vnd.ms-excel') {
+        // Excel: upload to Drive, convert to Google Sheet, extract text
+        const text = extractTextFromSpreadsheetBlob(att);
+        if (text) {
+          textParts.push('[File: ' + att.getName() + ']\n' + text.substring(0, 4000));
+        }
+      }
+      // Skip images, .ics, .vcf, and other non-text attachments
+    } catch (e) {
+      logAction('Attachment Error', 'Failed to extract ' + att.getName() + ': ' + e.message);
+    }
+  }
+
+  return textParts.length > 0 ? textParts.join('\n\n') : null;
+}
+
+/**
+ * Convert a PDF blob to text via Google Drive OCR conversion.
+ */
+function extractTextFromPdfBlob(blob) {
+  const folder = getOrCreateTempFolder();
+  let file = null;
+  let docFile = null;
+
+  try {
+    // Upload PDF to Drive with OCR conversion to Google Doc
+    const resource = {
+      title: 'temp-ticket-pdf-' + Date.now(),
+      mimeType: 'application/pdf',
+      parents: [{ id: folder.getId() }]
+    };
+
+    file = Drive.Files.insert(resource, blob, {
+      ocr: true,
+      ocrLanguage: 'en',
+      convert: true
+    });
+
+    // Open the converted Google Doc and get its text
+    const doc = DocumentApp.openById(file.id);
+    const text = doc.getBody().getText();
+
+    return text || null;
+  } finally {
+    // Clean up temp files
+    try { if (file) Drive.Files.remove(file.id); } catch (e) { /* ignore */ }
+  }
+}
+
+/**
+ * Convert an Excel blob to text via Google Sheets conversion.
+ */
+function extractTextFromSpreadsheetBlob(blob) {
+  const folder = getOrCreateTempFolder();
+  let file = null;
+
+  try {
+    // Upload to Drive, converting to Google Sheets
+    file = Drive.Files.insert(
+      {
+        title: 'temp-ticket-xls-' + Date.now(),
+        mimeType: blob.getContentType(),
+        parents: [{ id: folder.getId() }]
+      },
+      blob,
+      { convert: true }
+    );
+
+    // Open as spreadsheet and read all data
+    const ss = SpreadsheetApp.openById(file.id);
+    const sheets = ss.getSheets();
+    const textParts = [];
+
+    for (const sheet of sheets) {
+      const data = sheet.getDataRange().getValues();
+      const rows = data.map(row => row.join('\t'));
+      textParts.push(rows.join('\n'));
+    }
+
+    return textParts.join('\n\n') || null;
+  } finally {
+    try { if (file) Drive.Files.remove(file.id); } catch (e) { /* ignore */ }
+  }
+}
+
+/**
+ * Get or create a temp folder in Drive for file conversions.
+ */
+function getOrCreateTempFolder() {
+  const folders = DriveApp.getFoldersByName(CONFIG.TEMP_FOLDER_NAME);
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  return DriveApp.createFolder(CONFIG.TEMP_FOLDER_NAME);
+}
+
+// =====================================================
+// DOWNLOAD LINK EXTRACTION
+// =====================================================
+
+/**
+ * Scan email body for download/report links, fetch them, and extract text.
+ * Looks for URLs containing report/download/ticket keywords.
+ */
+function extractDownloadLinkText(body) {
+  if (!body) return null;
+
+  // Find URLs in the body
+  const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+  const urls = body.match(urlRegex);
+  if (!urls) return null;
+
+  // Keywords that suggest a link points to a ticket report
+  const reportKeywords = /report|download|ticket|audit|count|export|pdf|csv|box.?office|settlement/i;
+
+  // Domains to skip (social media, unsubscribe, marketing, etc.)
+  const skipDomains = /facebook\.com|twitter\.com|instagram\.com|youtube\.com|linkedin\.com|mailto:|unsubscribe|manage.*preferences|email.*settings|opt.?out|google\.com\/maps/i;
+
+  const textParts = [];
+
+  for (const url of urls) {
+    // Skip non-report links
+    if (skipDomains.test(url)) continue;
+    if (!reportKeywords.test(url) && !reportKeywords.test(body.substring(Math.max(0, body.indexOf(url) - 100), body.indexOf(url) + url.length + 100))) continue;
+
+    try {
+      const response = UrlFetchApp.fetch(url, {
+        muteHttpExceptions: true,
+        followRedirects: true,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+
+      const responseCode = response.getResponseCode();
+      if (responseCode !== 200) continue;
+
+      const contentType = response.getHeaders()['Content-Type'] || '';
+
+      if (contentType.includes('text/html') || contentType.includes('text/plain')) {
+        // HTML or text page — grab the text
+        let text = response.getContentText();
+        // Strip HTML tags for a rough text extraction
+        text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+        text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+        text = text.replace(/<[^>]+>/g, ' ');
+        text = text.replace(/\s+/g, ' ').trim();
+        if (text.length > 50) {
+          textParts.push('[Downloaded from: ' + url.substring(0, 80) + ']\n' + text.substring(0, 4000));
+        }
+
+      } else if (contentType.includes('pdf')) {
+        // PDF download — convert via Drive
+        const blob = response.getBlob().setName('temp-download-' + Date.now() + '.pdf');
+        const text = extractTextFromPdfBlob(blob);
+        if (text) {
+          textParts.push('[Downloaded PDF from: ' + url.substring(0, 80) + ']\n' + text.substring(0, 4000));
+        }
+
+      } else if (contentType.includes('csv') || contentType.includes('spreadsheet') || contentType.includes('excel')) {
+        // CSV or spreadsheet download
+        const text = response.getContentText();
+        if (text.length > 10) {
+          textParts.push('[Downloaded file from: ' + url.substring(0, 80) + ']\n' + text.substring(0, 4000));
+        }
+      }
+
+    } catch (e) {
+      // Link fetch failed — skip silently
+    }
+
+    // Only process first 3 matching links per email to stay within time limits
+    if (textParts.length >= 3) break;
+  }
+
+  return textParts.length > 0 ? textParts.join('\n\n') : null;
+}
+
+// =====================================================
+// CLAUDE API CALL
+// =====================================================
 
 /**
  * Call the Netlify function to parse an email with Claude
@@ -241,6 +487,39 @@ function callClaudeParse(from, subject, body) {
 function pullAndParse() {
   pullEmails();
   parseEmails();
+}
+
+// =====================================================
+// RE-PARSE: Process previously failed/missed emails
+// =====================================================
+
+/**
+ * Reset all "Yes" processed emails back to "No" so they get re-parsed
+ * with the new attachment/link extraction. Only use this once after
+ * updating to this new version.
+ */
+function resetProcessedEmails() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const raw = ss.getSheetByName(CONFIG.RAW_SHEET);
+  if (!raw) return;
+
+  const lastRow = raw.getLastRow();
+  if (lastRow < 2) return;
+
+  const processedCol = raw.getRange(2, 7, lastRow - 1, 1);
+  const values = processedCol.getValues();
+  let resetCount = 0;
+
+  for (let i = 0; i < values.length; i++) {
+    if (values[i][0] === 'Yes' || values[i][0] === 'Error') {
+      values[i][0] = 'No';
+      resetCount++;
+    }
+  }
+
+  processedCol.setValues(values);
+  logAction('Reset', 'Reset ' + resetCount + ' emails for re-processing');
+  SpreadsheetApp.getUi().alert('Reset ' + resetCount + ' emails. Run "Parse with Claude" to re-process them with attachment/link extraction.');
 }
 
 // =====================================================
@@ -286,6 +565,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Pull & Parse (both)', 'pullAndParse')
     .addSeparator()
+    .addItem('Reset for Re-Parse', 'resetProcessedEmails')
     .addItem('Set Up Daily Automation', 'setupDailyTrigger')
     .addToUi();
 }
