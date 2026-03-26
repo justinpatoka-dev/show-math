@@ -274,13 +274,24 @@
         </div>
       </div>
 
-      <!-- Ad Spend Curve -->
-      <div class="result-card" id="ad-curve-card">
-        <h2>Tickets vs Ad Spend</h2>
-        <div id="ad-curve-container" style="position: relative; width: 100%; height: 220px;">
-          <canvas id="ad-curve-canvas" width="600" height="220" style="width: 100%; height: 100%;"></canvas>
+      <!-- Net Gain/Loss Chart -->
+      <div class="result-card chart-card" id="net-gl-card">
+        <h2>Net Gain / Loss from Ads</h2>
+        <div class="chart-container" id="net-gl-container">
+          <canvas id="net-gl-canvas"></canvas>
+          <div class="chart-tooltip" id="net-gl-tooltip"></div>
+          <div class="chart-crosshair-v" id="net-gl-crosshair"></div>
         </div>
-        <p class="ad-curve-hint" id="ad-curve-hint"></p>
+      </div>
+
+      <!-- Tickets vs Ad Spend Chart -->
+      <div class="result-card chart-card" id="ad-curve-card">
+        <h2>Tickets vs Ad Spend</h2>
+        <div class="chart-container" id="ad-curve-container">
+          <canvas id="ad-curve-canvas"></canvas>
+          <div class="chart-tooltip" id="ad-curve-tooltip"></div>
+          <div class="chart-crosshair-v" id="ad-curve-crosshair"></div>
+        </div>
       </div>
 
       <!-- Scenario Comparison -->

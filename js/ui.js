@@ -1,6 +1,7 @@
 // DOM rendering — reads inputs, renders results, manages field visibility
 
 import { DEAL_TYPES, getDealType } from './dealTypes.js';
+import { calculateNetGainLossCurve } from './calculator.js';
 
 // ============================================
 // Read all inputs from the form
@@ -177,9 +178,11 @@ export function renderResults(results) {
     adsDivider.style.opacity = hasAdsInputs ? '1' : '0.4';
   }
 
-  // Draw the ad spend curve
+  // Draw both charts
   if (hasAdsInputs) {
-    drawAdSpendCurve(results, baseline, costPerTicket, ticketGoal, currentAdSpend, marketingFee);
+    const inputs = readInputs();
+    drawNetGainLossChart(results, inputs, baseline, costPerTicket, ticketGoal, currentAdSpend, marketingFee);
+    drawTicketsChart(results, baseline, costPerTicket, ticketGoal, currentAdSpend, marketingFee);
   }
 
   // ---- LEFT COLUMN: Break even on ads ----
@@ -324,129 +327,477 @@ export function renderResults(results) {
 }
 
 // ============================================
-// Ad Spend Curve Chart
+// Shared chart utilities
 // ============================================
 
-function drawAdSpendCurve(results, baseline, costPerTicket, ticketGoal, currentAdSpend, marketingFee) {
-  const canvas = document.getElementById('ad-curve-canvas');
-  if (!canvas) return;
+const CHART_COLORS = {
+  curve: '#111111',
+  curveGradientTop: 'rgba(17,17,17,0.12)',
+  curveGradientBot: 'rgba(17,17,17,0.01)',
+  grid: 'rgba(0,0,0,0.06)',
+  axisLine: 'rgba(0,0,0,0.12)',
+  axisLabel: '#888888',
+  tickLabel: '#555555',
+  breakeven: '#D4882E',
+  breakevenBg: 'rgba(212,136,46,0.12)',
+  current: '#b5221a',
+  currentBg: 'rgba(181,34,26,0.08)',
+  goal: '#1a7a3a',
+  goalBg: 'rgba(26,122,58,0.08)',
+  positive: '#1a7a3a',
+  positiveFill: 'rgba(26,122,58,0.10)',
+  negative: '#b5221a',
+  negativeFill: 'rgba(181,34,26,0.08)',
+  zeroLine: 'rgba(0,0,0,0.20)',
+  inflection: '#D4882E',
+  baseline: 'rgba(0,0,0,0.18)',
+};
 
-  const ctx = canvas.getContext('2d');
+const CHART_MARGIN = { top: 20, right: 24, bottom: 38, left: 56 };
+
+function setupCanvas(canvas) {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.parentElement.getBoundingClientRect();
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  const W = rect.width;
-  const H = rect.height;
+  return { ctx, W: rect.width, H: rect.height, dpr };
+}
 
-  ctx.clearRect(0, 0, W, H);
+function chartArea(W, H) {
+  const m = CHART_MARGIN;
+  return { x: m.left, y: m.top, w: W - m.left - m.right, h: H - m.top - m.bottom };
+}
 
-  // Chart margins
-  const ml = 50, mr = 20, mt = 15, mb = 35;
-  const cw = W - ml - mr;
-  const ch = H - mt - mb;
+function drawGrid(ctx, area, xMax, yMin, yMax, opts = {}) {
+  const xTicks = opts.xTicks || 5;
+  const yTicks = opts.yTicks || 5;
 
-  // Determine x-axis range (ad spend) — go up to 2x equilibrium or 2x goal ad spend or $2000, whichever is higher
-  const goalAdSpend = ticketGoal > 0 && costPerTicket > 0 ? Math.max(0, ticketGoal - baseline) * costPerTicket : 0;
-  const eqSpend = results.equilibrium || 0;
-  const maxAdSpend = Math.max(500, eqSpend * 1.5, goalAdSpend * 1.5, currentAdSpend * 1.5);
-
-  // Y-axis: tickets
-  const maxTickets = baseline + Math.ceil(maxAdSpend / costPerTicket);
-  const yMax = Math.max(maxTickets, ticketGoal > 0 ? ticketGoal * 1.2 : maxTickets);
-
-  // Helper: data to pixel
-  const xPx = (spend) => ml + (spend / maxAdSpend) * cw;
-  const yPx = (tickets) => mt + ch - (tickets / yMax) * ch;
-
-  // Grid lines
-  ctx.strokeStyle = '#d5d5d5';
+  // Horizontal grid lines
+  ctx.strokeStyle = CHART_COLORS.grid;
   ctx.lineWidth = 1;
-  const yTicks = 5;
   for (let i = 0; i <= yTicks; i++) {
-    const y = mt + (ch / yTicks) * i;
+    const y = area.y + (area.h / yTicks) * i;
     ctx.beginPath();
-    ctx.moveTo(ml, y);
-    ctx.lineTo(ml + cw, y);
+    ctx.moveTo(area.x, y);
+    ctx.lineTo(area.x + area.w, y);
     ctx.stroke();
   }
 
   // Y-axis labels
-  ctx.fillStyle = '#555';
+  ctx.fillStyle = CHART_COLORS.tickLabel;
   ctx.font = '10px Inter, sans-serif';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   for (let i = 0; i <= yTicks; i++) {
-    const val = Math.round((yMax / yTicks) * (yTicks - i));
-    const y = mt + (ch / yTicks) * i;
-    ctx.fillText(val, ml - 6, y);
+    const val = yMax - ((yMax - yMin) / yTicks) * i;
+    const y = area.y + (area.h / yTicks) * i;
+    const label = opts.yFormat ? opts.yFormat(val) : Math.round(val).toString();
+    ctx.fillText(label, area.x - 8, y);
   }
 
   // X-axis labels
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  const xTicks = 5;
   for (let i = 0; i <= xTicks; i++) {
-    const val = Math.round((maxAdSpend / xTicks) * i);
-    const x = ml + (cw / xTicks) * i;
-    ctx.fillText('$' + val, x, mt + ch + 6);
+    const val = (xMax / xTicks) * i;
+    const x = area.x + (area.w / xTicks) * i;
+    ctx.fillText('$' + Math.round(val).toLocaleString(), x, area.y + area.h + 8);
   }
 
   // Axis labels
-  ctx.fillStyle = '#888';
+  ctx.fillStyle = CHART_COLORS.axisLabel;
   ctx.font = '10px Jost, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Ad Spend', ml + cw / 2, H - 3);
+  ctx.fillText('Ad Spend', area.x + area.w / 2, area.y + area.h + 26);
   ctx.save();
-  ctx.translate(12, mt + ch / 2);
+  ctx.translate(14, area.y + area.h / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Tickets', 0, 0);
+  ctx.fillText(opts.yAxisLabel || '', 0, 0);
   ctx.restore();
+}
 
-  // Baseline horizontal line
-  ctx.strokeStyle = '#aaa';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([4, 4]);
+function drawHorizontalLine(ctx, area, y, color, opts = {}) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = opts.width || 1;
+  if (opts.dash) ctx.setLineDash(opts.dash);
   ctx.beginPath();
-  ctx.moveTo(ml, yPx(baseline));
-  ctx.lineTo(ml + cw, yPx(baseline));
+  ctx.moveTo(area.x, y);
+  ctx.lineTo(area.x + area.w, y);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = '#888';
-  ctx.font = '9px Inter, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('baseline: ' + baseline, ml + 4, yPx(baseline) - 8);
 
-  // Ticket goal horizontal line
-  if (ticketGoal > 0) {
-    ctx.strokeStyle = '#1a7a3a';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([6, 3]);
-    ctx.beginPath();
-    ctx.moveTo(ml, yPx(ticketGoal));
-    ctx.lineTo(ml + cw, yPx(ticketGoal));
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#1a7a3a';
-    ctx.font = '9px Inter, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('goal: ' + ticketGoal, ml + 4, yPx(ticketGoal) - 8);
+  if (opts.label) {
+    ctx.fillStyle = color;
+    ctx.font = opts.labelFont || '9px Jost, sans-serif';
+    ctx.textAlign = opts.labelAlign || 'left';
+    const lx = opts.labelAlign === 'right' ? area.x + area.w - 4 : area.x + 6;
+    ctx.fillText(opts.label, lx, y + (opts.labelBelow ? 12 : -7));
+  }
+}
+
+function drawMarkerDot(ctx, x, y, color, radius = 5) {
+  // Glow
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
+  ctx.fillStyle = color.replace(')', ',0.15)').replace('rgb', 'rgba');
+  ctx.fill();
+  // Dot
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  // Inner highlight
+  ctx.beginPath();
+  ctx.arc(x, y, radius - 2, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fill();
+}
+
+function drawMarkerLabel(ctx, text, x, y, color, opts = {}) {
+  ctx.font = '10px Jost, sans-serif';
+  ctx.textAlign = 'center';
+  const tw = ctx.measureText(text).width;
+  const px = 5, py = 3;
+  const lx = x, ly = y - 14;
+  // Background pill
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.beginPath();
+  const r = 3;
+  ctx.roundRect(lx - tw / 2 - px, ly - 7 - py, tw + px * 2, 14 + py * 2, r);
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(lx - tw / 2 - px, ly - 7 - py, tw + px * 2, 14 + py * 2, r);
+  ctx.stroke();
+  // Text
+  ctx.fillStyle = color;
+  ctx.fillText(text, lx, ly + 1);
+}
+
+// Track AbortControllers per container so we can clean up old listeners
+const _tooltipControllers = {};
+
+function setupTooltip(containerId, canvasId, tooltipId, crosshairId, getDataAtX) {
+  const container = document.getElementById(containerId);
+  const canvas = document.getElementById(canvasId);
+  const tooltip = document.getElementById(tooltipId);
+  const crosshair = document.getElementById(crosshairId);
+  if (!container || !canvas || !tooltip || !crosshair) return;
+
+  // Abort previous listeners for this container
+  if (_tooltipControllers[containerId]) {
+    _tooltipControllers[containerId].abort();
+  }
+  const controller = new AbortController();
+  _tooltipControllers[containerId] = controller;
+  const signal = controller.signal;
+
+  const handleMove = (e) => {
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const area = chartArea(rect.width, rect.height);
+
+    if (x < area.x || x > area.x + area.w || y < area.y || y > area.y + area.h) {
+      tooltip.style.display = 'none';
+      crosshair.style.display = 'none';
+      return;
+    }
+
+    const data = getDataAtX(x, area);
+    if (!data) return;
+
+    crosshair.style.display = 'block';
+    crosshair.style.left = x + 'px';
+
+    tooltip.style.display = 'block';
+    tooltip.innerHTML = data.html;
+
+    // Position tooltip — flip if near right edge
+    const tipW = tooltip.offsetWidth;
+    const tipH = tooltip.offsetHeight;
+    let tx = x + 12;
+    if (tx + tipW > rect.width - 8) tx = x - tipW - 12;
+    let ty = y - tipH / 2;
+    if (ty < 4) ty = 4;
+    if (ty + tipH > rect.height - 4) ty = rect.height - tipH - 4;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+  };
+
+  const handleLeave = () => {
+    tooltip.style.display = 'none';
+    crosshair.style.display = 'none';
+  };
+
+  container.addEventListener('mousemove', handleMove, { signal });
+  container.addEventListener('mouseleave', handleLeave, { signal });
+  container.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    handleMove({ clientX: touch.clientX, clientY: touch.clientY });
+  }, { passive: false, signal });
+  container.addEventListener('touchend', handleLeave, { signal });
+}
+
+// ============================================
+// Net Gain/Loss Chart
+// ============================================
+
+function drawNetGainLossChart(results, inputs, baseline, costPerTicket, ticketGoal, currentAdSpend, marketingFee) {
+  const canvas = document.getElementById('net-gl-canvas');
+  if (!canvas) return;
+
+  const { ctx, W, H } = setupCanvas(canvas);
+  const area = chartArea(W, H);
+  ctx.clearRect(0, 0, W, H);
+
+  // Calculate curve data
+  const goalAdSpend = ticketGoal > 0 && costPerTicket > 0 ? Math.max(0, ticketGoal - baseline) * costPerTicket : 0;
+  const eqSpend = results.equilibrium || 0;
+  const maxAdSpend = Math.max(500, eqSpend * 1.8, goalAdSpend * 1.5, currentAdSpend * 1.5);
+
+  const curveData = calculateNetGainLossCurve(inputs, maxAdSpend, 150);
+  if (curveData.length === 0) return;
+
+  // Y range
+  const allY = curveData.map(d => d.netGainLoss);
+  const dataMin = Math.min(...allY);
+  const dataMax = Math.max(...allY);
+  const yPad = Math.max(Math.abs(dataMax - dataMin) * 0.15, 50);
+  const yMin = Math.min(dataMin - yPad, -20);
+  const yMax = Math.max(dataMax + yPad, 20);
+
+  // Coordinate helpers
+  const xPx = (spend) => area.x + (spend / maxAdSpend) * area.w;
+  const yPx = (val) => area.y + area.h - ((val - yMin) / (yMax - yMin)) * area.h;
+
+  // Draw grid
+  drawGrid(ctx, area, maxAdSpend, yMin, yMax, {
+    yAxisLabel: 'Net Gain / Loss',
+    yFormat: (v) => (v >= 0 ? '$' : '-$') + Math.abs(Math.round(v)).toLocaleString(),
+  });
+
+  // Zero line
+  if (yMin < 0 && yMax > 0) {
+    const zeroY = yPx(0);
+    drawHorizontalLine(ctx, area, zeroY, CHART_COLORS.zeroLine, {
+      width: 1.5,
+      label: 'BREAK EVEN',
+      labelFont: '9px Jost, sans-serif',
+      labelAlign: 'right',
+    });
   }
 
-  // Draw the curve: total tickets = baseline + adSpend/costPerTicket
-  ctx.strokeStyle = '#111';
-  ctx.lineWidth = 2.5;
+  // Colored fill zones
+  const zeroY = yPx(0);
+  const clampedZeroY = Math.max(area.y, Math.min(area.y + area.h, zeroY));
+
+  // Loss zone (red tint below zero)
+  if (yMin < 0) {
+    const grad = ctx.createLinearGradient(0, clampedZeroY, 0, area.y + area.h);
+    grad.addColorStop(0, 'rgba(181,34,26,0.00)');
+    grad.addColorStop(1, 'rgba(181,34,26,0.06)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(area.x, clampedZeroY, area.w, area.y + area.h - clampedZeroY);
+  }
+
+  // Gain zone (green tint above zero)
+  if (yMax > 0) {
+    const grad = ctx.createLinearGradient(0, area.y, 0, clampedZeroY);
+    grad.addColorStop(0, 'rgba(26,122,58,0.06)');
+    grad.addColorStop(1, 'rgba(26,122,58,0.00)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(area.x, area.y, area.w, clampedZeroY - area.y);
+  }
+
+  // Draw curve fill (gradient under/over curve to zero line)
   ctx.beginPath();
-  const steps = 100;
-  for (let i = 0; i <= steps; i++) {
-    const spend = (maxAdSpend / steps) * i;
-    const tickets = baseline + Math.floor(spend / costPerTicket);
-    const x = xPx(spend);
-    const y = yPx(tickets);
+  ctx.moveTo(xPx(curveData[0].adSpend), clampedZeroY);
+  for (const pt of curveData) {
+    ctx.lineTo(xPx(pt.adSpend), yPx(pt.netGainLoss));
+  }
+  ctx.lineTo(xPx(curveData[curveData.length - 1].adSpend), clampedZeroY);
+  ctx.closePath();
+  // Split fill: use a single semi-transparent fill since canvas can't easily split
+  const fillGrad = ctx.createLinearGradient(0, area.y, 0, area.y + area.h);
+  fillGrad.addColorStop(0, 'rgba(26,122,58,0.12)');
+  const zeroRatio = (clampedZeroY - area.y) / area.h;
+  fillGrad.addColorStop(Math.max(0, Math.min(1, zeroRatio)), 'rgba(0,0,0,0.02)');
+  fillGrad.addColorStop(1, 'rgba(181,34,26,0.10)');
+  ctx.fillStyle = fillGrad;
+  ctx.fill();
+
+  // Draw curve line
+  ctx.beginPath();
+  for (let i = 0; i < curveData.length; i++) {
+    const x = xPx(curveData[i].adSpend);
+    const y = yPx(curveData[i].netGainLoss);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
+  ctx.strokeStyle = CHART_COLORS.curve;
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Find inflection point (minimum of the curve = worst net loss)
+  let minIdx = 0;
+  for (let i = 1; i < curveData.length; i++) {
+    if (curveData[i].netGainLoss < curveData[minIdx].netGainLoss) minIdx = i;
+  }
+  const inflPt = curveData[minIdx];
+  // Only show inflection if it's meaningfully different from endpoints (i.e., a valley exists)
+  const isValley = minIdx > 0 && minIdx < curveData.length - 1 && inflPt.netGainLoss < curveData[0].netGainLoss - 10;
+
+  if (isValley) {
+    const ix = xPx(inflPt.adSpend);
+    const iy = yPx(inflPt.netGainLoss);
+    drawMarkerDot(ctx, ix, iy, CHART_COLORS.inflection, 4);
+    drawMarkerLabel(ctx, 'Worst loss: -$' + Math.abs(Math.round(inflPt.netGainLoss)).toLocaleString(), ix, iy, CHART_COLORS.inflection);
+  }
+
+  // Break-even marker
+  if (results.equilibrium !== null && results.equilibrium <= maxAdSpend) {
+    // Find the curve point closest to break-even
+    let beIdx = 0;
+    for (let i = 1; i < curveData.length; i++) {
+      if (Math.abs(curveData[i].adSpend - results.equilibrium) < Math.abs(curveData[beIdx].adSpend - results.equilibrium)) beIdx = i;
+    }
+    const bx = xPx(results.equilibrium);
+    const by = yPx(curveData[beIdx].netGainLoss);
+    drawMarkerDot(ctx, bx, by, CHART_COLORS.breakeven, 5);
+    const beLabel = 'Break even: $' + Math.round(results.equilibrium).toLocaleString();
+    // Position label above if at bottom, below if at top
+    drawMarkerLabel(ctx, beLabel, bx, by, CHART_COLORS.breakeven);
+  }
+
+  // Current ad spend marker
+  if (currentAdSpend > 0 && currentAdSpend <= maxAdSpend) {
+    let curIdx = 0;
+    for (let i = 1; i < curveData.length; i++) {
+      if (Math.abs(curveData[i].adSpend - currentAdSpend) < Math.abs(curveData[curIdx].adSpend - currentAdSpend)) curIdx = i;
+    }
+    const cx = xPx(currentAdSpend);
+    const cy = yPx(curveData[curIdx].netGainLoss);
+
+    // Vertical line
+    ctx.strokeStyle = CHART_COLORS.current;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(cx, area.y);
+    ctx.lineTo(cx, area.y + area.h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    drawMarkerDot(ctx, cx, cy, CHART_COLORS.current, 5);
+  }
+
+  // Interactive tooltip
+  setupTooltip('net-gl-container', 'net-gl-canvas', 'net-gl-tooltip', 'net-gl-crosshair', (mouseX, chartArea) => {
+    const pct = (mouseX - chartArea.x) / chartArea.w;
+    const adSpend = pct * maxAdSpend;
+    // Find closest data point
+    let closest = curveData[0];
+    for (const pt of curveData) {
+      if (Math.abs(pt.adSpend - adSpend) < Math.abs(closest.adSpend - adSpend)) closest = pt;
+    }
+    const glClass = closest.netGainLoss >= 0 ? 'tt-positive' : 'tt-negative';
+    const glSign = closest.netGainLoss >= 0 ? '+' : '-';
+    return {
+      html: `
+        <div><span class="tt-label">Ad Spend</span></div>
+        <div class="tt-value">$${Math.round(closest.adSpend).toLocaleString()}</div>
+        <div style="margin-top:4px"><span class="tt-label">Net Gain/Loss</span></div>
+        <div class="tt-value ${glClass}">${glSign}$${Math.abs(Math.round(closest.netGainLoss)).toLocaleString()}</div>
+        <div style="margin-top:4px"><span class="tt-label">Total Tickets</span></div>
+        <div class="tt-value">${closest.tickets}</div>
+      `
+    };
+  });
+}
+
+// ============================================
+// Tickets vs Ad Spend Chart
+// ============================================
+
+function drawTicketsChart(results, baseline, costPerTicket, ticketGoal, currentAdSpend, marketingFee) {
+  const canvas = document.getElementById('ad-curve-canvas');
+  if (!canvas) return;
+
+  const { ctx, W, H } = setupCanvas(canvas);
+  const area = chartArea(W, H);
+  ctx.clearRect(0, 0, W, H);
+
+  const goalAdSpend = ticketGoal > 0 && costPerTicket > 0 ? Math.max(0, ticketGoal - baseline) * costPerTicket : 0;
+  const eqSpend = results.equilibrium || 0;
+  const maxAdSpend = Math.max(500, eqSpend * 1.5, goalAdSpend * 1.5, currentAdSpend * 1.5);
+
+  const maxTickets = baseline + Math.ceil(maxAdSpend / costPerTicket);
+  const yMax = Math.max(maxTickets, ticketGoal > 0 ? ticketGoal * 1.2 : maxTickets);
+  const yMin = 0;
+
+  const xPx = (spend) => area.x + (spend / maxAdSpend) * area.w;
+  const yPx = (tickets) => area.y + area.h - ((tickets - yMin) / (yMax - yMin)) * area.h;
+
+  // Grid
+  drawGrid(ctx, area, maxAdSpend, yMin, yMax, { yAxisLabel: 'Tickets' });
+
+  // Baseline horizontal line
+  drawHorizontalLine(ctx, area, yPx(baseline), CHART_COLORS.baseline, {
+    dash: [5, 4],
+    label: 'Baseline: ' + baseline,
+    labelFont: '9px Jost, sans-serif',
+  });
+
+  // Ticket goal horizontal line
+  if (ticketGoal > 0) {
+    drawHorizontalLine(ctx, area, yPx(ticketGoal), CHART_COLORS.goal, {
+      dash: [6, 3],
+      width: 1.5,
+      label: 'Goal: ' + ticketGoal,
+      labelFont: '9px Jost, sans-serif',
+    });
+  }
+
+  // Build curve points
+  const steps = 150;
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const spend = (maxAdSpend / steps) * i;
+    const tickets = baseline + Math.floor(spend / costPerTicket);
+    points.push({ spend, tickets });
+  }
+
+  // Gradient fill under curve
+  ctx.beginPath();
+  ctx.moveTo(xPx(0), yPx(0));
+  for (const pt of points) {
+    ctx.lineTo(xPx(pt.spend), yPx(pt.tickets));
+  }
+  ctx.lineTo(xPx(maxAdSpend), yPx(0));
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, area.y, 0, area.y + area.h);
+  grad.addColorStop(0, CHART_COLORS.curveGradientTop);
+  grad.addColorStop(1, CHART_COLORS.curveGradientBot);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Curve line
+  ctx.beginPath();
+  for (let i = 0; i < points.length; i++) {
+    const x = xPx(points[i].spend);
+    const y = yPx(points[i].tickets);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = CHART_COLORS.curve;
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
   ctx.stroke();
 
   // Break-even marker
@@ -454,14 +805,8 @@ function drawAdSpendCurve(results, baseline, costPerTicket, ticketGoal, currentA
     const beTickets = baseline + Math.floor(results.equilibrium / costPerTicket);
     const bx = xPx(results.equilibrium);
     const by = yPx(beTickets);
-    ctx.fillStyle = '#D4882E';
-    ctx.beginPath();
-    ctx.arc(bx, by, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#D4882E';
-    ctx.font = '9px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('break even', bx, by - 10);
+    drawMarkerDot(ctx, bx, by, CHART_COLORS.breakeven, 5);
+    drawMarkerLabel(ctx, 'Break even', bx, by, CHART_COLORS.breakeven);
   }
 
   // Current ad spend marker
@@ -469,36 +814,36 @@ function drawAdSpendCurve(results, baseline, costPerTicket, ticketGoal, currentA
     const curTickets = baseline + Math.floor(currentAdSpend / costPerTicket);
     const cx = xPx(currentAdSpend);
     const cy = yPx(curTickets);
-    ctx.strokeStyle = '#b5221a';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([3, 3]);
+
+    ctx.strokeStyle = CHART_COLORS.current;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.moveTo(cx, mt);
-    ctx.lineTo(cx, mt + ch);
+    ctx.moveTo(cx, area.y);
+    ctx.lineTo(cx, area.y + area.h);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = '#b5221a';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#b5221a';
-    ctx.font = '9px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('current: $' + currentAdSpend, cx, mt + ch + 20);
+
+    drawMarkerDot(ctx, cx, cy, CHART_COLORS.current, 5);
   }
 
-  // Hint text
-  const hintEl = document.getElementById('ad-curve-hint');
-  if (hintEl) {
-    if (ticketGoal > 0 && goalAdSpend > 0) {
-      hintEl.textContent = `To reach your goal of ${ticketGoal} tickets from a baseline of ${baseline}, you need ~$${Math.round(goalAdSpend)} in ad spend.`;
-    } else if (results.equilibrium !== null) {
-      const beTickets = baseline + Math.floor(results.equilibrium / costPerTicket);
-      hintEl.textContent = `Break-even at $${results.equilibrium} ad spend (${beTickets} tickets).`;
-    } else {
-      hintEl.textContent = '';
-    }
-  }
+  // Interactive tooltip
+  setupTooltip('ad-curve-container', 'ad-curve-canvas', 'ad-curve-tooltip', 'ad-curve-crosshair', (mouseX, chartArea) => {
+    const pct = (mouseX - chartArea.x) / chartArea.w;
+    const adSpend = pct * maxAdSpend;
+    const tickets = baseline + Math.floor(adSpend / costPerTicket);
+    const adTickets = tickets - baseline;
+    return {
+      html: `
+        <div><span class="tt-label">Ad Spend</span></div>
+        <div class="tt-value">$${Math.round(adSpend).toLocaleString()}</div>
+        <div style="margin-top:4px"><span class="tt-label">Total Tickets</span></div>
+        <div class="tt-value">${tickets}</div>
+        <div style="margin-top:4px"><span class="tt-label">Tickets from Ads</span></div>
+        <div class="tt-value">${adTickets}</div>
+      `
+    };
+  });
 }
 
 // ============================================

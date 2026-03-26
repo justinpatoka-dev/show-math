@@ -331,6 +331,36 @@ function simulateSide(dealType, inputs, tickets) {
 // Recommendation generator
 // ============================================
 
+// ============================================
+// Net gain/loss curve data for charting
+// ============================================
+
+export function calculateNetGainLossCurve(inputs, maxAdSpend, steps = 120) {
+  const dealType = getDealType(inputs.dealTypeId);
+  if (!dealType || inputs.costPerTicket <= 0) return [];
+
+  const baseline = inputs.ticketsWithout;
+  const withoutSide = calculateSide(dealType, inputs, baseline);
+
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const adSpend = (maxAdSpend / steps) * i;
+    const extraTickets = Math.floor(adSpend / inputs.costPerTicket);
+    const ticketsWith = baseline + extraTickets;
+    const withSide = calculateSide(dealType, inputs, ticketsWith);
+    const additionalIncome = withSide.totalIncome - withoutSide.totalIncome;
+    const promoCost = inputs.marketingFee + adSpend;
+    const netGainLoss = additionalIncome - promoCost;
+    points.push({ adSpend, netGainLoss, tickets: ticketsWith });
+  }
+
+  return points;
+}
+
+// ============================================
+// Recommendation generator
+// ============================================
+
 function generateRecommendation(inputs, dealType, backend, withoutPromo, withPromo, netGainLoss, promoCost, breakeven) {
   let financial = '';
   let strategic = '';
